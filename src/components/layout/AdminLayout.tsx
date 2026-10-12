@@ -5,7 +5,7 @@ import {
   LayoutDashboard, 
   Calendar, 
   Users, 
-  Ticket, 
+  Tags, 
   MessageSquare, 
   Images,
   Shield, 
@@ -28,7 +28,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
 
   // Strict role-protection
   if (!isAuthenticated || !isAdmin) {
-    return <Navigate to="/login?redirect=/admin" replace />;
+    return <Navigate to={`/admin/login?redirect=${encodeURIComponent(location.pathname)}`} replace />;
   }
 
   const navItems = [
@@ -36,7 +36,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
     { name: 'Manage Events', path: '/admin/events', icon: Calendar },
     { name: 'Event Gallery', path: '/admin/gallery', icon: Images },
     { name: 'Crew Management', path: '/admin/crew', icon: Users },
-    { name: 'Event Registrations', path: '/admin/registrations', icon: Ticket },
+    { name: 'Categories', path: '/admin/categories', icon: Tags },
     { name: 'Contact Submissions', path: '/admin/contacts', icon: MessageSquare },
   ];
 

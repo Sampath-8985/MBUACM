@@ -16,6 +16,15 @@ export default {
           light: '#38bdf8',
           glow: '#0284c7',
         },
+        brand: {
+          blue: '#0a86d2',
+          bright: '#0a8fdc',
+          deep: '#064a95',
+          navy: '#0a2342',
+          ink: '#07172e',
+          orange: '#f97b2c',
+          mist: '#f2f6fa',
+        },
         navy: {
           800: '#111b2e',
           850: '#0d1527',
@@ -25,6 +34,7 @@ export default {
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
+        jakarta: ['"Plus Jakarta Sans"', 'Inter', 'system-ui', 'sans-serif'],
         display: ['Outfit', 'Inter', 'system-ui', 'sans-serif'],
         mono: ['JetBrains Mono', 'monospace'],
       },

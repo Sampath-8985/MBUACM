@@ -1,18 +1,13 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { 
-  Sparkles, 
-  Target, 
-  Eye, 
-  Award, 
-  CheckCircle2, 
-  Globe, 
-  Users, 
-  BookOpen, 
+import {
+  Target,
+  Eye,
+  CheckCircle2,
   ArrowRight,
-  ShieldCheck,
-  Compass
+  Compass,
 } from 'lucide-react';
+import { teams } from '../lib/teams';
 
 export const AboutPage: React.FC = () => {
   return (
@@ -93,66 +88,69 @@ export const AboutPage: React.FC = () => {
           </div>
         </div>
 
-        {/* What We Do */}
+        {/* Our Teams */}
         <div className="mb-20">
-          <div className="text-center max-w-2xl mx-auto mb-12">
-            <h2 className="font-display font-bold text-3xl text-white tracking-tight">
-              What We Do at Mohan Babu University
+          <div className="max-w-2xl mb-10">
+            <h2 className="font-display font-bold text-3xl sm:text-4xl text-white tracking-tight">
+              Our Teams
             </h2>
-            <p className="text-sm text-slate-400 mt-2">
-              Our initiatives span every stage of student engineering development.
+            <p className="text-sm sm:text-base text-slate-300 mt-3 leading-relaxed">
+              Six teams share the work of running the chapter. Each one has its own focus, so there is a place for
+              coders, writers, designers and organisers.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div className="glass-panel p-6 border border-slate-800">
-              <Award className="w-8 h-8 text-acm-cyan mb-4" />
-              <h3 className="font-display font-bold text-lg text-white">Flagship Hackathons</h3>
-              <p className="text-xs text-slate-300 leading-relaxed mt-2">
-                We organize HackSprint and internal coding sprints where students collaborate in multidisciplinary teams to build working prototypes within 36 hours.
-              </p>
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {teams.map((team) => {
+              const Icon = team.icon;
+              return (
+                <div
+                  key={team.name}
+                  className="glass-panel p-6 border border-slate-800 hover:border-acm-cyan/40 transition-colors flex flex-col"
+                >
+                  <div className="flex items-center gap-4">
+                    <div
+                      className={`w-12 h-12 rounded-xl border flex items-center justify-center shrink-0 ${team.accent}`}
+                    >
+                      <Icon className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h3 className="font-display font-bold text-lg text-white leading-tight">{team.name}</h3>
+                      <p className="text-xs text-acm-light mt-0.5">{team.tagline}</p>
+                    </div>
+                  </div>
 
-            <div className="glass-panel p-6 border border-slate-800">
-              <BookOpen className="w-8 h-8 text-purple-400 mb-4" />
-              <h3 className="font-display font-bold text-lg text-white">Technical Masterclasses</h3>
-              <p className="text-xs text-slate-300 leading-relaxed mt-2">
-                Hands-on training sessions covering Docker, Kubernetes, LangChain, React, Go, and PyTorch, led by experienced senior peers and alumni.
-              </p>
-            </div>
+                  <ul className="mt-5 space-y-2.5 text-sm text-slate-300 leading-relaxed flex-1">
+                    {team.duties.map((duty) => (
+                      <li key={duty} className="flex gap-2.5">
+                        <span className="mt-2 w-1.5 h-1.5 rounded-full bg-acm-cyan shrink-0" />
+                        <span>{duty}</span>
+                      </li>
+                    ))}
+                  </ul>
 
-            <div className="glass-panel p-6 border border-slate-800">
-              <Globe className="w-8 h-8 text-amber-400 mb-4" />
-              <h3 className="font-display font-bold text-lg text-white">ACM Global Affiliation</h3>
-              <p className="text-xs text-slate-300 leading-relaxed mt-2">
-                Access to the ACM Digital Library, discounted student certifications, special interest groups (SIGs), and a worldwide network of computing pioneers.
-              </p>
-            </div>
-
-            <div className="glass-panel p-6 border border-slate-800">
-              <Users className="w-8 h-8 text-emerald-400 mb-4" />
-              <h3 className="font-display font-bold text-lg text-white">Peer Mentorship</h3>
-              <p className="text-xs text-slate-300 leading-relaxed mt-2">
-                Junior members receive dedicated guidance on resume building, open-source pull requests, GitHub portfolios, and tech interview preparation.
-              </p>
-            </div>
-
-            <div className="glass-panel p-6 border border-slate-800">
-              <ShieldCheck className="w-8 h-8 text-sky-400 mb-4" />
-              <h3 className="font-display font-bold text-lg text-white">Competitive Programming</h3>
-              <p className="text-xs text-slate-300 leading-relaxed mt-2">
-                Weekly problem sets, algorithmic workshops, and simulated contest environments designed for Codeforces, LeetCode, and ICPC regionals.
-              </p>
-            </div>
-
-            <div className="glass-panel p-6 border border-slate-800">
-              <Sparkles className="w-8 h-8 text-pink-400 mb-4" />
-              <h3 className="font-display font-bold text-lg text-white">Industry Keynotes</h3>
-              <p className="text-xs text-slate-300 leading-relaxed mt-2">
-                Direct AMAs and technical keynotes from staff engineers, engineering managers, and researchers from Google, Microsoft, Amazon, and research labs.
-              </p>
-            </div>
+                  <div className="mt-5 pt-4 border-t border-slate-800/80 flex flex-wrap gap-2">
+                    {team.skills.map((skill) => (
+                      <span
+                        key={skill}
+                        className="text-[11px] px-2.5 py-1 rounded-full bg-slate-800/70 text-slate-300 border border-slate-700/60"
+                      >
+                        {skill}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
           </div>
+
+          <p className="mt-8 text-sm text-slate-400">
+            Want to join a team?{' '}
+            <Link to="/contact" className="text-acm-light hover:underline font-semibold">
+              Write to us
+            </Link>{' '}
+            and tell us which one you are interested in.
+          </p>
         </div>
 
         {/* Chapter Achievements */}

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useCategories } from '../../hooks/useCategories';
 import { AdminLayout } from '../../components/layout/AdminLayout';
 import { ClubEvent } from '../../types';
 import { getEvents, deleteEvent, updateEvent } from '../../services/events';
@@ -11,7 +12,6 @@ import {
   Edit, 
   Trash2, 
   ExternalLink, 
-  Ticket, 
   CheckCircle2, 
   Clock, 
   Eye, 
@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 
 export const AdminEventsPage: React.FC = () => {
+  const { labelFor } = useCategories();
   const [events, setEvents] = useState<ClubEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState<string>('all');
@@ -146,7 +147,7 @@ export const AdminEventsPage: React.FC = () => {
                   <tr className="border-b border-slate-800 text-slate-400 font-mono uppercase text-[10px] bg-navy-950/70">
                     <th className="py-3.5 px-4 font-semibold">Event</th>
                     <th className="py-3.5 px-3 font-semibold">Status</th>
-                    <th className="py-3.5 px-3 font-semibold">Reg Type</th>
+                    <th className="py-3.5 px-3 font-semibold">Category</th>
                     <th className="py-3.5 px-3 font-semibold">Start Date</th>
                     <th className="py-3.5 px-4 font-semibold text-right">Actions</th>
                   </tr>
@@ -179,8 +180,8 @@ export const AdminEventsPage: React.FC = () => {
                         </td>
 
                         <td className="py-3.5 px-3 whitespace-nowrap">
-                          <span className="text-[11px] font-mono text-slate-300 capitalize">
-                            {event.registration_type}
+                          <span className="text-[11px] font-mono text-slate-300">
+                            {labelFor(event.category)}
                           </span>
                         </td>
 
@@ -202,15 +203,6 @@ export const AdminEventsPage: React.FC = () => {
                             >
                               {event.status === 'published' ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                             </button>
-
-                            {/* View Registrations */}
-                            <Link
-                              to={`/admin/registrations?eventId=${event.id}`}
-                              className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition-colors"
-                              title="View Event Registrations"
-                            >
-                              <Ticket className="w-3.5 h-3.5 text-acm-cyan" />
-                            </Link>
 
                             {/* Edit */}
                             <Link
@@ -252,7 +244,7 @@ export const AdminEventsPage: React.FC = () => {
         <ConfirmModal
           isOpen={deleteModalOpen}
           title="Delete Event?"
-          message={`Are you sure you want to delete "${eventToDelete?.title}"? This will permanently remove the event and any internal registrations associated with it.`}
+          message={`Are you sure you want to delete "${eventToDelete?.title}"? This will permanently remove the event.`}
           confirmLabel="Yes, Delete Permanently"
           cancelLabel="Cancel"
           isDestructive={true}

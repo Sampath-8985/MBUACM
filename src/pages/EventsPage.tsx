@@ -3,18 +3,16 @@ import { ClubEvent } from '../types';
 import { getEvents } from '../services/events';
 import { EventCard } from '../components/events/EventCard';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
-import { Calendar, Search, Filter, Sparkles, CheckCircle2 } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
-import { getUserRegistrations } from '../services/registrations';
+import { Calendar, Search, Filter, Sparkles } from 'lucide-react';
+import { useCategories } from '../hooks/useCategories';
 
 export const EventsPage: React.FC = () => {
   const [events, setEvents] = useState<ClubEvent[]>([]);
-  const [userRegisteredEventIds, setUserRegisteredEventIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [timeFilter, setTimeFilter] = useState<'all' | 'upcoming' | 'past'>('upcoming');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
-  const { user } = useAuth();
+  const { categories: categoryList } = useCategories();
 
   useEffect(() => {
     async function loadEventsData() {
@@ -22,11 +20,6 @@ export const EventsPage: React.FC = () => {
       try {
         const publishedEvents = await getEvents(false); // Only published events
         setEvents(publishedEvents);
-
-        if (user) {
-          const regs = await getUserRegistrations(user.id);
-          setUserRegisteredEventIds(regs.map((r) => r.event_id));
-        }
       } catch (err) {
         console.error('Failed to load events:', err);
       } finally {
@@ -34,24 +27,23 @@ export const EventsPage: React.FC = () => {
       }
     }
     loadEventsData();
-  }, [user]);
+  }, []);
 
-  const categories = [
-    { id: 'all', label: 'All Categories' },
-    { id: 'hackathon', label: 'Hackathons' },
-    { id: 'workshop', label: 'Workshops' },
-    { id: 'talk', label: 'Tech Talks' },
-    { id: 'contest', label: 'Contests' },
-  ];
+  // Keep the category chip in sync with the search box
+  useEffect(() => {
+    setCategoryFilter('all');
+  }, [searchTerm]);
+
+  const categories = [{ id: 'all', label: 'All Categories' }, ...categoryList];
 
   // Filtering logic
   const now = Date.now();
   const filteredEvents = events.filter((event) => {
     // 1. Search term
     const matchesSearch =
-      event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (event.summary && event.summary.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (event.venue && event.venue.toLowerCase().includes(searchTerm.toLowerCase()));
+      event.title.includes(searchTerm) ||
+      (event.summary && event.summary.includes(searchTerm)) ||
+      (event.venue && event.venue.includes(searchTerm));
 
     if (!matchesSearch) return false;
 
@@ -164,11 +156,7 @@ export const EventsPage: React.FC = () => {
         ) : filteredEvents.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredEvents.map((event) => (
-              <EventCard
-                key={event.id}
-                event={event}
-                isRegistered={userRegisteredEventIds.includes(event.id)}
-              />
+              <EventCard key={event.id} event={event} />
             ))}
           </div>
         ) : (

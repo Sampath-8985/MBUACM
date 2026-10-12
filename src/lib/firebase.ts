@@ -1,7 +1,6 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
-import { getStorage } from 'firebase/storage';
+import { initializeFirestore, getFirestore, Firestore } from 'firebase/firestore';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -16,24 +15,29 @@ export const isFirebaseConfigured = Boolean(
   firebaseConfig.apiKey &&
   firebaseConfig.projectId &&
   !firebaseConfig.apiKey.includes('your-firebase-api-key') &&
-  !firebaseConfig.projectId.includes('your-firebase-project-id')
+  !firebaseConfig.projectId.includes('your-project-id')
 );
 
-// If keys are provided, initialize real Firebase; otherwise, initialize a mock fallback app
+// If keys are provided, initialize real Firebase; otherwise, initialize a placeholder app (local demo data)
 const app = getApps().length > 0
   ? getApp()
   : initializeApp(isFirebaseConfigured ? firebaseConfig : {
       apiKey: 'demo-api-key-placeholder',
       authDomain: 'mbu-acm-chapter.firebaseapp.com',
       projectId: 'mbu-acm-chapter',
-      storageBucket: 'mbu-acm-chapter.appspot.com',
-      messagingSenderId: '123456789012',
       appId: '1:123456789012:web:abcdef123456',
     });
 
 export const auth = getAuth(app);
-export const db = getFirestore(app);
-export const storage = getStorage(app);
+
+// Ignore empty (undefined) optional fields instead of throwing an error
+let firestore: Firestore;
+try {
+  firestore = initializeFirestore(app, { ignoreUndefinedProperties: true });
+} catch {
+  firestore = getFirestore(app); // already initialised (hot reload)
+}
+export const db = firestore;
 
 export const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({

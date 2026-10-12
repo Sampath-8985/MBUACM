@@ -7,8 +7,7 @@ import {
   updateDoc, 
   deleteDoc, 
   query, 
-  where, 
-  orderBy 
+  where 
 } from 'firebase/firestore';
 import { db, isFirebaseConfigured } from '../lib/firebase';
 import { ClubEvent } from '../types';
@@ -17,16 +16,17 @@ import { LocalStore } from './store';
 export async function getEvents(includeUnpublished = false): Promise<ClubEvent[]> {
   if (isFirebaseConfigured && db) {
     try {
-      let q = query(collection(db, 'events'), orderBy('start_at', 'asc'));
-      if (!includeUnpublished) {
-        q = query(collection(db, 'events'), where('status', '==', 'published'), orderBy('start_at', 'asc'));
-      }
+      // No orderBy here (it would need a composite index); we sort in the browser instead
+      const q = includeUnpublished
+        ? query(collection(db, 'events'))
+        : query(collection(db, 'events'), where('status', '==', 'published'));
       const snap = await getDocs(q);
       const items: ClubEvent[] = [];
       snap.forEach((d) => items.push(d.data() as ClubEvent));
-      return items;
+      return items.sort((a, b) => new Date(a.start_at).getTime() - new Date(b.start_at).getTime());
     } catch (e) {
-      console.warn('Error fetching events from Firebase Firestore:', e);
+      console.error('Error fetching events from Firebase Firestore:', e);
+      return [];
     }
   }
 
@@ -42,11 +42,10 @@ export async function getEventById(id: string): Promise<ClubEvent | null> {
   if (isFirebaseConfigured && db) {
     try {
       const snap = await getDoc(doc(db, 'events', id));
-      if (snap.exists()) {
-        return snap.data() as ClubEvent;
-      }
+      return snap.exists() ? (snap.data() as ClubEvent) : null;
     } catch (e) {
-      console.warn('Error getting event by ID from Firebase:', e);
+      console.error('Error getting event by ID from Firebase:', e);
+      return null;
     }
   }
 
@@ -130,10 +129,6 @@ export async function deleteEvent(id: string): Promise<{ success: boolean; error
   const events = LocalStore.getEvents();
   const filtered = events.filter((e) => e.id !== id);
   LocalStore.saveEvents(filtered);
-
-  // Also clean up related registrations in local store
-  const registrations = LocalStore.getRegistrations();
-  LocalStore.saveRegistrations(registrations.filter((r) => r.event_id !== id));
 
   return { success: true };
 }

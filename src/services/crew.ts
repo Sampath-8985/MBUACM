@@ -6,8 +6,7 @@ import {
   updateDoc, 
   deleteDoc, 
   query, 
-  where, 
-  orderBy 
+  where 
 } from 'firebase/firestore';
 import { db, isFirebaseConfigured } from '../lib/firebase';
 import { CrewMember } from '../types';
@@ -16,16 +15,16 @@ import { LocalStore } from './store';
 export async function getCrew(includeUnpublished = false): Promise<CrewMember[]> {
   if (isFirebaseConfigured && db) {
     try {
-      let q = query(collection(db, 'crew_members'), orderBy('display_order', 'asc'));
-      if (!includeUnpublished) {
-        q = query(collection(db, 'crew_members'), where('is_published', '==', true), orderBy('display_order', 'asc'));
-      }
+      const q = includeUnpublished
+        ? query(collection(db, 'crew_members'))
+        : query(collection(db, 'crew_members'), where('is_published', '==', true));
       const snap = await getDocs(q);
       const items: CrewMember[] = [];
       snap.forEach((d) => items.push(d.data() as CrewMember));
-      return items;
+      return items.sort((a, b) => a.display_order - b.display_order);
     } catch (e) {
-      console.warn('Error fetching crew from Firebase Firestore:', e);
+      console.error('Error fetching crew from Firebase Firestore:', e);
+      return [];
     }
   }
 

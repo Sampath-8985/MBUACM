@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { AdminLayout } from '../../components/layout/AdminLayout';
-import { EventGalleryItem, EventGalleryPhoto, EventCategory, ClubEvent } from '../../types';
+import { EventGalleryItem, EventGalleryPhoto, ClubEvent } from '../../types';
+import { useCategories } from '../../hooks/useCategories';
 import { getGallery, createGalleryItem, updateGalleryItem, deleteGalleryItem } from '../../services/gallery';
 import { getEvents } from '../../services/events';
 import { uploadImage } from '../../services/storage';
@@ -25,15 +26,9 @@ import {
   Image as ImageIcon
 } from 'lucide-react';
 
-const CATEGORY_OPTIONS: { label: string; value: EventCategory }[] = [
-  { label: 'Hackathon', value: 'hackathon' },
-  { label: 'Workshop', value: 'workshop' },
-  { label: 'Tech Talk / Keynote', value: 'talk' },
-  { label: 'Contest', value: 'contest' },
-  { label: 'General / Expo', value: 'general' },
-];
-
 export const AdminGalleryPage: React.FC = () => {
+  const { categories } = useCategories();
+  const CATEGORY_OPTIONS = categories.map((c) => ({ label: c.label, value: c.id }));
   const [albums, setAlbums] = useState<EventGalleryItem[]>([]);
   const [eventsList, setEventsList] = useState<ClubEvent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -47,7 +42,7 @@ export const AdminGalleryPage: React.FC = () => {
   const [title, setTitle] = useState('');
   const [eventDate, setEventDate] = useState('');
   const [academicYear, setAcademicYear] = useState('2024-2025');
-  const [category, setCategory] = useState<EventCategory>('hackathon');
+  const [category, setCategory] = useState<string>('hackathon');
   const [summary, setSummary] = useState('');
   const [description, setDescription] = useState('');
   const [coverImageUrl, setCoverImageUrl] = useState('');
@@ -636,7 +631,7 @@ export const AdminGalleryPage: React.FC = () => {
                     <label className="text-xs font-mono text-slate-300">Category</label>
                     <select
                       value={category}
-                      onChange={(e) => setCategory(e.target.value as EventCategory)}
+                      onChange={(e) => setCategory(e.target.value)}
                       className="w-full px-3 py-2 rounded-xl bg-navy-950 border border-slate-700 text-xs text-slate-200 focus:outline-none focus:border-acm-cyan"
                     >
                       {CATEGORY_OPTIONS.map((c) => (

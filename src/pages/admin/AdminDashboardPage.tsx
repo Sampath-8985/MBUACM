@@ -3,15 +3,15 @@ import { Link } from 'react-router-dom';
 import { AdminLayout } from '../../components/layout/AdminLayout';
 import { getEvents } from '../../services/events';
 import { getCrew } from '../../services/crew';
-import { getAllRegistrations } from '../../services/registrations';
+import { getCategories } from '../../services/categories';
 import { getContactSubmissions } from '../../services/contact';
 import { getGallery } from '../../services/gallery';
-import { ClubEvent, CrewMember, EventRegistration, ContactSubmission, EventGalleryItem } from '../../types';
+import { ClubEvent, CrewMember, ContactSubmission, EventGalleryItem, EventCategoryItem } from '../../types';
 import { LoadingSpinner } from '../../components/ui/LoadingSpinner';
 import { 
   Calendar, 
   Users, 
-  Ticket, 
+  Tags, 
   MessageSquare, 
   Sparkles, 
   PlusCircle, 
@@ -26,7 +26,7 @@ import {
 export const AdminDashboardPage: React.FC = () => {
   const [events, setEvents] = useState<ClubEvent[]>([]);
   const [crew, setCrew] = useState<CrewMember[]>([]);
-  const [registrations, setRegistrations] = useState<EventRegistration[]>([]);
+  const [categories, setCategories] = useState<EventCategoryItem[]>([]);
   const [contacts, setContacts] = useState<ContactSubmission[]>([]);
   const [gallery, setGallery] = useState<EventGalleryItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -35,17 +35,17 @@ export const AdminDashboardPage: React.FC = () => {
     async function loadAdminData() {
       setLoading(true);
       try {
-        const [evData, crData, regData, cntData, galData] = await Promise.all([
+        const [evData, crData, catData, cntData, galData] = await Promise.all([
           getEvents(true), // All events including drafts
           getCrew(true),   // All crew
-          getAllRegistrations(),
+          getCategories(),
           getContactSubmissions(),
           getGallery(true),
         ]);
 
         setEvents(evData);
         setCrew(crData);
-        setRegistrations(regData);
+        setCategories(catData);
         setContacts(cntData);
         setGallery(galData);
       } catch (err) {
@@ -91,18 +91,18 @@ export const AdminDashboardPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Active Registrations */}
+          {/* Categories */}
           <div className="glass-panel p-5 border border-slate-800">
             <div className="flex items-center justify-between text-emerald-400 mb-3">
-              <span className="text-xs font-mono font-medium text-slate-400 uppercase">Registrations</span>
+              <span className="text-xs font-mono font-medium text-slate-400 uppercase">Categories</span>
               <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-                <Ticket className="w-4 h-4 text-emerald-400" />
+                <Tags className="w-4 h-4 text-emerald-400" />
               </div>
             </div>
-            <p className="font-display font-bold text-3xl text-white">{registrations.length}</p>
+            <p className="font-display font-bold text-3xl text-white">{categories.length}</p>
             <div className="flex items-center gap-1.5 text-xs text-slate-400 mt-2 font-mono">
               <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Real database records</span>
+              <span>Event categories</span>
             </div>
           </div>
 
@@ -164,12 +164,12 @@ export const AdminDashboardPage: React.FC = () => {
             </Link>
 
             <Link
-              to="/admin/registrations"
+              to="/admin/categories"
               className="p-3.5 rounded-xl bg-navy-950/70 border border-slate-800 hover:border-emerald-500/50 hover:bg-slate-800/40 transition-all flex items-center justify-between text-xs font-semibold text-slate-200 group"
             >
               <div className="flex items-center gap-2.5">
-                <Ticket className="w-4 h-4 text-emerald-400" />
-                <span>Export Registrations</span>
+                <Tags className="w-4 h-4 text-emerald-400" />
+                <span>Manage Categories</span>
               </div>
               <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-white transition-colors" />
             </Link>
@@ -196,70 +196,6 @@ export const AdminDashboardPage: React.FC = () => {
               <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-white transition-colors" />
             </Link>
           </div>
-        </div>
-
-        {/* Recent Registrations Feed */}
-        <div className="glass-panel p-6 border border-slate-800">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h2 className="font-display font-bold text-base text-white">
-                Recent Student Registrations
-              </h2>
-              <p className="text-xs text-slate-400">
-                Latest internal registrations submitted by students across events.
-              </p>
-            </div>
-            <Link
-              to="/admin/registrations"
-              className="text-xs font-semibold text-acm-light hover:underline flex items-center gap-1"
-            >
-              <span>View All Registrations</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
-          </div>
-
-          {registrations.length > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead>
-                  <tr className="border-b border-slate-800 text-slate-400 font-mono uppercase text-[10px]">
-                    <th className="pb-3 font-semibold">Student Name</th>
-                    <th className="pb-3 font-semibold">Roll Number</th>
-                    <th className="pb-3 font-semibold">Event</th>
-                    <th className="pb-3 font-semibold">Date Registered</th>
-                    <th className="pb-3 font-semibold text-right">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800/60">
-                  {registrations.slice(0, 5).map((reg) => (
-                    <tr key={reg.id} className="hover:bg-slate-800/30">
-                      <td className="py-3 font-medium text-white">
-                        {reg.profile?.full_name || 'Student Member'}
-                      </td>
-                      <td className="py-3 font-mono text-acm-light">
-                        {reg.profile?.roll_number || 'N/A'}
-                      </td>
-                      <td className="py-3 text-slate-300 max-w-xs truncate">
-                        {reg.event?.title || reg.event_id}
-                      </td>
-                      <td className="py-3 text-slate-400">
-                        {new Date(reg.registered_at).toLocaleDateString()}
-                      </td>
-                      <td className="py-3 text-right">
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
-                          {reg.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div className="p-8 text-center text-xs text-slate-400">
-              No registrations recorded in the database yet.
-            </div>
-          )}
         </div>
 
       </div>

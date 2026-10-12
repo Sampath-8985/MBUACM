@@ -33,7 +33,7 @@ export const ContactPage: React.FC = () => {
       return;
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const emailRegex = /^[^\s@]+@[^\s@]+$/;
     if (!emailRegex.test(formData.email.trim())) {
       setFeedback({ type: 'error', message: 'Please provide a valid email address.' });
       return;

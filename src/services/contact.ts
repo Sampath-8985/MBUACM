@@ -4,8 +4,7 @@ import {
   getDocs, 
   setDoc, 
   updateDoc, 
-  query, 
-  orderBy 
+  query 
 } from 'firebase/firestore';
 import { db, isFirebaseConfigured } from '../lib/firebase';
 import { ContactSubmission } from '../types';
@@ -46,13 +45,13 @@ export async function submitContact(data: {
 export async function getContactSubmissions(): Promise<ContactSubmission[]> {
   if (isFirebaseConfigured && db) {
     try {
-      const q = query(collection(db, 'contacts'), orderBy('created_at', 'desc'));
-      const snap = await getDocs(q);
+      const snap = await getDocs(query(collection(db, 'contacts')));
       const items: ContactSubmission[] = [];
       snap.forEach((d) => items.push(d.data() as ContactSubmission));
-      return items;
+      return items.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     } catch (e) {
-      console.warn('Error fetching contact submissions from Firebase Firestore:', e);
+      console.error('Error fetching contact submissions from Firebase Firestore:', e);
+      return [];
     }
   }
 

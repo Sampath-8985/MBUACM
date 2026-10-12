@@ -64,7 +64,7 @@ export const CrewCard: React.FC<CrewCardProps> = ({ member }) => {
         <div className="pt-4 border-t border-slate-800/80 flex items-center justify-center gap-2">
           {member.social_links?.linkedin && (
             <a
-              href={member.social_links.linkedin}
+              href={member.social_links.github}
               target="_blank"
               rel="noreferrer"
               className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 hover:border-acm-cyan/50 border border-transparent transition-all"
@@ -75,7 +75,7 @@ export const CrewCard: React.FC<CrewCardProps> = ({ member }) => {
           )}
           {member.social_links?.github && (
             <a
-              href={member.social_links.github}
+              href={member.social_links.linkedin}
               target="_blank"
               rel="noreferrer"
               className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 hover:border-acm-cyan/50 border border-transparent transition-all"

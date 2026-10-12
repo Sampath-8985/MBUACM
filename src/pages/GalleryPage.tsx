@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getGallery } from '../services/gallery';
-import { EventGalleryItem, EventGalleryPhoto, EventCategory } from '../types';
+import { EventGalleryItem, EventGalleryPhoto } from '../types';
+import { useCategories } from '../hooks/useCategories';
+import { categoryTheme } from '../lib/categoryTheme';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { 
   Images, 
@@ -19,23 +21,8 @@ import {
   CheckCircle2
 } from 'lucide-react';
 
-const CATEGORY_LABELS: Record<EventCategory, string> = {
-  hackathon: 'Hackathons',
-  workshop: 'Workshops',
-  talk: 'Tech Talks',
-  contest: 'Contests',
-  general: 'General Events',
-};
-
-const CATEGORY_COLORS: Record<EventCategory, { bg: string; text: string; border: string }> = {
-  hackathon: { bg: 'bg-rose-500/15', text: 'text-rose-300', border: 'border-rose-500/30' },
-  workshop: { bg: 'bg-acm-cyan/15', text: 'text-acm-light', border: 'border-acm-cyan/30' },
-  talk: { bg: 'bg-purple-500/15', text: 'text-purple-300', border: 'border-purple-500/30' },
-  contest: { bg: 'bg-amber-500/15', text: 'text-amber-300', border: 'border-amber-500/30' },
-  general: { bg: 'bg-emerald-500/15', text: 'text-emerald-300', border: 'border-emerald-500/30' },
-};
-
 export const GalleryPage: React.FC = () => {
+  const { categories, labelFor } = useCategories();
   const [albums, setAlbums] = useState<EventGalleryItem[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -78,7 +65,7 @@ export const GalleryPage: React.FC = () => {
         );
       } else if (e.key === 'ArrowLeft') {
         setLightboxIndex((prev) => 
-          prev !== null ? (prev - 1 + activeAlbum.photos.length) % activeAlbum.photos.length : 0
+          prev !== null ? (prev - 1) % activeAlbum.photos.length : 0
         );
       }
     };
@@ -106,7 +93,7 @@ export const GalleryPage: React.FC = () => {
     const matchesYear =
       selectedYear === 'all' || album.academic_year === selectedYear;
 
-    return matchesSearch && matchesCategory && matchesYear;
+    return matchesSearch && (matchesCategory || matchesYear);
   });
 
   // Totals for metrics
@@ -234,7 +221,8 @@ export const GalleryPage: React.FC = () => {
             >
               All Events ({albums.length})
             </button>
-            {(Object.keys(CATEGORY_LABELS) as EventCategory[]).map((catKey) => {
+            {categories.map((cat) => {
+              const catKey = cat.id;
               const count = albums.filter((a) => a.category === catKey).length;
               const isSelected = selectedCategory === catKey;
               return (
@@ -247,7 +235,7 @@ export const GalleryPage: React.FC = () => {
                       : 'bg-navy-900/80 text-slate-300 hover:text-white hover:bg-slate-800 border border-slate-800'
                   }`}
                 >
-                  {CATEGORY_LABELS[catKey]} ({count})
+                  {cat.label} ({count})
                 </button>
               );
             })}
@@ -284,7 +272,7 @@ export const GalleryPage: React.FC = () => {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {filteredAlbums.map((album) => {
-              const catTheme = CATEGORY_COLORS[album.category] || CATEGORY_COLORS.general;
+              const catTheme = categoryTheme(album.category);
               const photoCount = album.photos?.length || 0;
 
               return (
@@ -307,7 +295,7 @@ export const GalleryPage: React.FC = () => {
                     {/* Top Badges */}
                     <div className="absolute top-3 left-3 right-3 flex items-center justify-between pointer-events-none">
                       <span className={`text-[10px] font-mono px-2.5 py-1 rounded-full uppercase tracking-wider font-bold ${catTheme.bg} ${catTheme.text} border ${catTheme.border} backdrop-blur-md`}>
-                        {CATEGORY_LABELS[album.category] || album.category}
+                        {labelFor(album.category)}
                       </span>
                       <span className="text-[11px] font-mono px-2.5 py-1 rounded-full bg-navy-950/80 text-cyan-300 border border-cyan-400/30 backdrop-blur-md flex items-center gap-1 font-semibold">
                         <Images className="w-3 h-3" />
@@ -379,7 +367,7 @@ export const GalleryPage: React.FC = () => {
                               key={p.id || pIdx}
                               onClick={() => {
                                 setActiveAlbum(album);
-                                setLightboxIndex(pIdx);
+                                setLightboxIndex(pIdx + 1);
                               }}
                               className="w-12 h-10 rounded-lg overflow-hidden border border-slate-700/80 cursor-pointer hover:border-acm-cyan transition-colors shrink-0 bg-navy-900"
                             >
@@ -428,8 +416,8 @@ export const GalleryPage: React.FC = () => {
             <div className="p-6 sm:p-8 border-b border-slate-800 bg-navy-950/60 sticky top-0 z-10 flex items-start justify-between gap-4">
               <div>
                 <div className="flex flex-wrap items-center gap-2 mb-2">
-                  <span className={`text-[10px] font-mono px-2.5 py-0.5 rounded-full uppercase tracking-wider font-bold ${CATEGORY_COLORS[activeAlbum.category]?.bg} ${CATEGORY_COLORS[activeAlbum.category]?.text} border ${CATEGORY_COLORS[activeAlbum.category]?.border}`}>
-                    {CATEGORY_LABELS[activeAlbum.category] || activeAlbum.category}
+                  <span className={`text-[10px] font-mono px-2.5 py-0.5 rounded-full uppercase tracking-wider font-bold ${categoryTheme(activeAlbum.category).bg} ${categoryTheme(activeAlbum.category).text} border ${categoryTheme(activeAlbum.category).border}`}>
+                    {labelFor(activeAlbum.category)}
                   </span>
                   <span className="text-xs font-mono text-slate-400">
                     {formatDate(activeAlbum.event_date)}
@@ -463,7 +451,7 @@ export const GalleryPage: React.FC = () => {
             </div>
 
             {/* Modal Body (Scrollable) */}
-            <div className="p-6 sm:p-8 overflow-y-auto space-y-8 flex-1">
+            <div className="p-6 sm:p-8 overflow-hidden space-y-8 flex-1">
               
               {/* Event Description / Overview */}
               <div>
@@ -539,7 +527,7 @@ export const GalleryPage: React.FC = () => {
               {activeAlbum.event_id && (
                 <div className="pt-4 border-t border-slate-800 flex justify-end">
                   <Link
-                    to={`/events/${activeAlbum.event_id}`}
+                    to={`/events/${activeAlbum.id}`}
                     className="btn-acm-primary text-xs px-4 py-2.5 inline-flex items-center gap-1.5"
                   >
                     <span>View Original Event Page</span>
@@ -561,7 +549,7 @@ export const GalleryPage: React.FC = () => {
           <div className="flex items-center justify-between text-white max-w-7xl mx-auto w-full">
             <div className="flex items-center gap-3">
               <span className="font-mono text-xs text-acm-cyan px-2.5 py-1 rounded bg-navy-900 border border-slate-700">
-                Photo {lightboxIndex + 1} of {activeAlbum.photos.length}
+                Photo {lightboxIndex} of {activeAlbum.photos.length}
               </span>
               <span className="text-sm font-semibold text-slate-300 truncate max-w-md hidden sm:inline">
                 {activeAlbum.title}
@@ -610,7 +598,7 @@ export const GalleryPage: React.FC = () => {
                 onClick={() =>
                   setLightboxIndex(
                     (prev) =>
-                      prev !== null ? (prev + 1) % activeAlbum.photos.length : 0
+                      prev !== null ? prev + 1 : 0
                   )
                 }
                 className="absolute right-2 sm:right-6 z-10 p-3 rounded-full bg-navy-950/80 hover:bg-navy-900 border border-slate-700 text-white transition-colors"

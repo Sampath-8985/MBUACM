@@ -7,8 +7,7 @@ import {
   updateDoc, 
   deleteDoc, 
   query, 
-  where, 
-  orderBy 
+  where 
 } from 'firebase/firestore';
 import { db, isFirebaseConfigured } from '../lib/firebase';
 import { EventGalleryItem } from '../types';
@@ -21,16 +20,16 @@ import { LocalStore } from './store';
 export async function getGallery(includeUnpublished = false): Promise<EventGalleryItem[]> {
   if (isFirebaseConfigured && db) {
     try {
-      let q = query(collection(db, 'event_gallery'), orderBy('event_date', 'desc'));
-      if (!includeUnpublished) {
-        q = query(collection(db, 'event_gallery'), where('is_published', '==', true), orderBy('event_date', 'desc'));
-      }
+      const q = includeUnpublished
+        ? query(collection(db, 'event_gallery'))
+        : query(collection(db, 'event_gallery'), where('is_published', '==', true));
       const snap = await getDocs(q);
       const items: EventGalleryItem[] = [];
       snap.forEach((d) => items.push(d.data() as EventGalleryItem));
-      return items;
+      return items.sort((a, b) => new Date(b.event_date).getTime() - new Date(a.event_date).getTime());
     } catch (e) {
-      console.warn('Error fetching gallery from Firebase Firestore:', e);
+      console.error('Error fetching gallery from Firebase Firestore:', e);
+      return [];
     }
   }
 
@@ -53,11 +52,10 @@ export async function getGalleryItemById(id: string): Promise<EventGalleryItem |
   if (isFirebaseConfigured && db) {
     try {
       const snap = await getDoc(doc(db, 'event_gallery', id));
-      if (snap.exists()) {
-        return snap.data() as EventGalleryItem;
-      }
+      return snap.exists() ? (snap.data() as EventGalleryItem) : null;
     } catch (e) {
-      console.warn('Error fetching gallery item from Firebase Firestore:', e);
+      console.error('Error fetching gallery item from Firebase Firestore:', e);
+      return null;
     }
   }
 

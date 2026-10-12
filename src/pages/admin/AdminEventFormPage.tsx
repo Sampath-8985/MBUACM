@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { AdminLayout } from '../../components/layout/AdminLayout';
-import { ClubEvent, EventCategory, EventStatus, RegistrationType } from '../../types';
+import { EventStatus } from '../../types';
+import { useCategories } from '../../hooks/useCategories';
+import { createCategory } from '../../services/categories';
 import { getEventById, createEvent, updateEvent } from '../../services/events';
 import { uploadImage } from '../../services/storage';
 import { LoadingSpinner } from '../../components/ui/LoadingSpinner';
@@ -35,12 +37,29 @@ export const AdminEventFormPage: React.FC = () => {
   const [endAt, setEndAt] = useState('');
   const [venue, setVenue] = useState('Mohan Babu University Campus');
   const [registrationDeadline, setRegistrationDeadline] = useState('');
-  const [registrationType, setRegistrationType] = useState<RegistrationType>('internal');
   const [registrationUrl, setRegistrationUrl] = useState('');
   const [eligibility, setEligibility] = useState('');
   const [status, setStatus] = useState<EventStatus>('draft');
   const [registrationEnabled, setRegistrationEnabled] = useState(true);
-  const [category, setCategory] = useState<EventCategory>('hackathon');
+  const [category, setCategory] = useState<string>('hackathon');
+  const { categories, reload: reloadCategories } = useCategories();
+  const [newCategory, setNewCategory] = useState('');
+  const [addingCategory, setAddingCategory] = useState(false);
+  const [categoryError, setCategoryError] = useState<string | null>(null);
+
+  const handleAddCategory = async () => {
+    setCategoryError(null);
+    setAddingCategory(true);
+    const res = await createCategory(newCategory);
+    setAddingCategory(false);
+    if (res.success && res.category) {
+      await reloadCategories();
+      setCategory(res.category.id);
+      setNewCategory('');
+    } else {
+      setCategoryError(res.error || 'Could not add category.');
+    }
+  };
 
   // File upload state
   const [uploadingPoster, setUploadingPoster] = useState(false);
@@ -61,7 +80,6 @@ export const AdminEventFormPage: React.FC = () => {
             setEndAt(ev.end_at ? new Date(ev.end_at).toISOString().slice(0, 16) : '');
             setVenue(ev.venue || '');
             setRegistrationDeadline(ev.registration_deadline ? new Date(ev.registration_deadline).toISOString().slice(0, 16) : '');
-            setRegistrationType(ev.registration_type);
             setRegistrationUrl(ev.registration_url || '');
             setEligibility(ev.eligibility_or_instructions || '');
             setStatus(ev.status);
@@ -139,8 +157,8 @@ export const AdminEventFormPage: React.FC = () => {
       return;
     }
 
-    if (registrationType === 'external' && !registrationUrl.trim()) {
-      setError('External registration link is required when external registration is selected.');
+    if (!registrationUrl.trim()) {
+      setError('Google Form link is required so students can register.');
       return;
     }
 
@@ -155,8 +173,8 @@ export const AdminEventFormPage: React.FC = () => {
       end_at: endDate.toISOString(),
       venue: venue.trim() || 'Mohan Babu University',
       registration_deadline: registrationDeadline ? new Date(registrationDeadline).toISOString() : undefined,
-      registration_type: registrationType,
-      registration_url: registrationType === 'external' ? registrationUrl.trim() : undefined,
+      registration_type: 'external' as const,
+      registration_url: registrationUrl.trim(),
       eligibility_or_instructions: eligibility.trim() || undefined,
       status,
       registration_enabled: registrationEnabled,
@@ -387,81 +405,52 @@ export const AdminEventFormPage: React.FC = () => {
                 </label>
                 <select
                   value={category}
-                  onChange={(e) => setCategory(e.target.value as EventCategory)}
+                  onChange={(e) => setCategory(e.target.value)}
                   className="w-full px-3.5 py-2.5 rounded-xl bg-navy-950/80 border border-slate-700/80 text-white text-sm focus:outline-none focus:border-acm-cyan"
                 >
-                  <option value="hackathon">Hackathon</option>
-                  <option value="workshop">Workshop</option>
-                  <option value="talk">Tech Talk</option>
-                  <option value="contest">Coding Contest</option>
-                  <option value="general">General Chapter Event</option>
+                  {categories.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.label}
+                    </option>
+                  ))}
                 </select>
+                <div className="mt-2 flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="Add a new category (e.g. Quiz)"
+                    value={newCategory}
+                    onChange={(e) => setNewCategory(e.target.value)}
+                    className="flex-1 px-3 py-2 rounded-xl bg-navy-950/80 border border-slate-700/80 text-white text-xs focus:outline-none focus:border-acm-cyan"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddCategory}
+                    disabled={addingCategory || !newCategory.trim()}
+                    className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-white border border-slate-700 disabled:opacity-50"
+                  >
+                    {addingCategory ? 'Adding...' : 'Add'}
+                  </button>
+                </div>
+                {categoryError && <p className="mt-1 text-[11px] text-rose-400">{categoryError}</p>}
               </div>
             </div>
 
-            {/* Registration Workflow: Internal vs External */}
-            <div className="p-5 rounded-2xl bg-navy-950/60 border border-slate-800 space-y-4">
-              <label className="block text-xs font-semibold text-slate-300">
-                Registration Method
+            {/* Registration: Google Form */}
+            <div className="p-5 rounded-2xl bg-navy-950/60 border border-slate-800 space-y-3">
+              <label className="block text-xs font-semibold text-purple-300">
+                Google Form Link (students register here) <span className="text-rose-400">*</span>
               </label>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <label className={`p-4 rounded-xl border cursor-pointer flex items-start gap-3 transition-all ${
-                  registrationType === 'internal'
-                    ? 'bg-acm-cyan/10 border-acm-cyan/50 text-white'
-                    : 'bg-navy-900 border-slate-800 text-slate-400'
-                }`}>
-                  <input
-                    type="radio"
-                    name="regType"
-                    checked={registrationType === 'internal'}
-                    onChange={() => setRegistrationType('internal')}
-                    className="mt-1"
-                  />
-                  <div>
-                    <strong className="text-xs font-semibold block text-white">Internal Website Registration</strong>
-                    <span className="text-[11px] text-slate-400">
-                      Students register directly with 1-click on the website. Data stored in database.
-                    </span>
-                  </div>
-                </label>
-
-                <label className={`p-4 rounded-xl border cursor-pointer flex items-start gap-3 transition-all ${
-                  registrationType === 'external'
-                    ? 'bg-purple-500/10 border-purple-500/50 text-white'
-                    : 'bg-navy-900 border-slate-800 text-slate-400'
-                }`}>
-                  <input
-                    type="radio"
-                    name="regType"
-                    checked={registrationType === 'external'}
-                    onChange={() => setRegistrationType('external')}
-                    className="mt-1"
-                  />
-                  <div>
-                    <strong className="text-xs font-semibold block text-white">External Platform Form</strong>
-                    <span className="text-[11px] text-slate-400">
-                      Redirects applicants to Google Form, Devpost, or Unstop URL.
-                    </span>
-                  </div>
-                </label>
-              </div>
-
-              {registrationType === 'external' && (
-                <div className="pt-2">
-                  <label className="block text-xs font-semibold text-purple-300 mb-1.5">
-                    External Registration Link URL <span className="text-rose-400">*</span>
-                  </label>
-                  <input
-                    type="url"
-                    required
-                    placeholder="https://forms.gle/... or https://unstop.com/..."
-                    value={registrationUrl}
-                    onChange={(e) => setRegistrationUrl(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-navy-950/80 border border-purple-500/50 text-white text-xs focus:outline-none focus:border-purple-400"
-                  />
-                </div>
-              )}
+              <input
+                type="url"
+                required
+                placeholder="https://forms.gle/..."
+                value={registrationUrl}
+                onChange={(e) => setRegistrationUrl(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-xl bg-navy-950/80 border border-purple-500/50 text-white text-xs focus:outline-none focus:border-purple-400"
+              />
+              <p className="text-[11px] text-slate-400">
+                This link is shown as the "Register via Google Form" button on the event page.
+              </p>
             </div>
 
             {/* Eligibility & Instructions */}

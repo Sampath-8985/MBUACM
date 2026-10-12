@@ -1,22 +1,19 @@
-import { ClubEvent, CrewMember, EventRegistration, ContactSubmission, UserProfile, EventGalleryItem } from '../types';
+import { ClubEvent, CrewMember, ContactSubmission, EventGalleryItem, EventCategoryItem } from '../types';
 import {
   INITIAL_CREW,
   INITIAL_EVENTS,
-  INITIAL_REGISTRATIONS,
   INITIAL_CONTACT_SUBMISSIONS,
   INITIAL_GALLERY,
-  DEMO_ADMIN_PROFILE,
-  DEMO_STUDENT_PROFILE
 } from '../lib/mockData';
 
+// Local (browser) storage is only used when Firebase keys are not set (local demo mode).
 const STORAGE_KEYS = {
   EVENTS: 'mbu_acm_events',
   CREW: 'mbu_acm_crew',
-  REGISTRATIONS: 'mbu_acm_registrations',
-  PROFILES: 'mbu_acm_profiles',
   CONTACTS: 'mbu_acm_contacts',
   GALLERY: 'mbu_acm_gallery',
-  CURRENT_USER_ID: 'mbu_acm_active_user_id',
+  CATEGORIES: 'mbu_acm_categories',
+  DEMO_ADMIN: 'mbu_acm_demo_admin',
 };
 
 function getFromStorage<T>(key: string, fallback: T): T {
@@ -38,59 +35,22 @@ function setToStorage<T>(key: string, data: T): void {
 }
 
 export const LocalStore = {
-  getEvents: (): ClubEvent[] => {
-    return getFromStorage(STORAGE_KEYS.EVENTS, INITIAL_EVENTS);
-  },
-  saveEvents: (events: ClubEvent[]): void => {
-    setToStorage(STORAGE_KEYS.EVENTS, events);
-  },
+  getEvents: (): ClubEvent[] => getFromStorage(STORAGE_KEYS.EVENTS, INITIAL_EVENTS),
+  saveEvents: (events: ClubEvent[]): void => setToStorage(STORAGE_KEYS.EVENTS, events),
 
-  getCrew: (): CrewMember[] => {
-    return getFromStorage(STORAGE_KEYS.CREW, INITIAL_CREW);
-  },
-  saveCrew: (crew: CrewMember[]): void => {
-    setToStorage(STORAGE_KEYS.CREW, crew);
-  },
+  getCrew: (): CrewMember[] => getFromStorage(STORAGE_KEYS.CREW, INITIAL_CREW),
+  saveCrew: (crew: CrewMember[]): void => setToStorage(STORAGE_KEYS.CREW, crew),
 
-  getRegistrations: (): EventRegistration[] => {
-    return getFromStorage(STORAGE_KEYS.REGISTRATIONS, INITIAL_REGISTRATIONS);
-  },
-  saveRegistrations: (regs: EventRegistration[]): void => {
-    setToStorage(STORAGE_KEYS.REGISTRATIONS, regs);
-  },
+  getContacts: (): ContactSubmission[] => getFromStorage(STORAGE_KEYS.CONTACTS, INITIAL_CONTACT_SUBMISSIONS),
+  saveContacts: (contacts: ContactSubmission[]): void => setToStorage(STORAGE_KEYS.CONTACTS, contacts),
 
-  getProfiles: (): Record<string, UserProfile> => {
-    const defaultProfiles = {
-      [DEMO_ADMIN_PROFILE.id]: DEMO_ADMIN_PROFILE,
-      [DEMO_STUDENT_PROFILE.id]: DEMO_STUDENT_PROFILE,
-    };
-    return getFromStorage(STORAGE_KEYS.PROFILES, defaultProfiles);
-  },
-  saveProfiles: (profiles: Record<string, UserProfile>): void => {
-    setToStorage(STORAGE_KEYS.PROFILES, profiles);
-  },
+  getGallery: (): EventGalleryItem[] => getFromStorage(STORAGE_KEYS.GALLERY, INITIAL_GALLERY),
+  saveGallery: (items: EventGalleryItem[]): void => setToStorage(STORAGE_KEYS.GALLERY, items),
 
-  getContacts: (): ContactSubmission[] => {
-    return getFromStorage(STORAGE_KEYS.CONTACTS, INITIAL_CONTACT_SUBMISSIONS);
-  },
-  saveContacts: (contacts: ContactSubmission[]): void => {
-    setToStorage(STORAGE_KEYS.CONTACTS, contacts);
-  },
+  getCategories: (defaults: EventCategoryItem[]): EventCategoryItem[] =>
+    getFromStorage(STORAGE_KEYS.CATEGORIES, defaults),
+  saveCategories: (items: EventCategoryItem[]): void => setToStorage(STORAGE_KEYS.CATEGORIES, items),
 
-  getGallery: (): EventGalleryItem[] => {
-    return getFromStorage(STORAGE_KEYS.GALLERY, INITIAL_GALLERY);
-  },
-  saveGallery: (items: EventGalleryItem[]): void => {
-    setToStorage(STORAGE_KEYS.GALLERY, items);
-  },
-
-  resetToDefault: (): void => {
-    localStorage.removeItem(STORAGE_KEYS.EVENTS);
-    localStorage.removeItem(STORAGE_KEYS.CREW);
-    localStorage.removeItem(STORAGE_KEYS.REGISTRATIONS);
-    localStorage.removeItem(STORAGE_KEYS.PROFILES);
-    localStorage.removeItem(STORAGE_KEYS.CONTACTS);
-    localStorage.removeItem(STORAGE_KEYS.GALLERY);
-    localStorage.removeItem(STORAGE_KEYS.CURRENT_USER_ID);
-  }
+  isDemoAdmin: (): boolean => getFromStorage(STORAGE_KEYS.DEMO_ADMIN, false),
+  setDemoAdmin: (value: boolean): void => setToStorage(STORAGE_KEYS.DEMO_ADMIN, value),
 };

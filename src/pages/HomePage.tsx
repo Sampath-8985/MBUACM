@@ -1,41 +1,125 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { 
-  Sparkles, 
-  ArrowRight, 
-  Calendar, 
-  Users, 
-  Trophy, 
-  Code2, 
-  Cpu, 
-  Terminal, 
-  Rocket, 
-  BookOpen, 
-  CheckCircle,
-  ExternalLink,
-  Images
-} from 'lucide-react';
+import { ArrowRight, Calendar, Camera, MapPin } from 'lucide-react';
 import { getEvents } from '../services/events';
-import { getCrew } from '../services/crew';
-import { ClubEvent, CrewMember } from '../types';
-import { EventCard } from '../components/events/EventCard';
-import { CrewCard } from '../components/crew/CrewCard';
+import { getGallery } from '../services/gallery';
+import { teams } from '../lib/teams';
+import { ClubEvent, EventGalleryItem } from '../types';
+import { useCategories } from '../hooks/useCategories';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 
+// ---------------------------------------------------------------------------
+// Small helpers (display only)
+// ---------------------------------------------------------------------------
+const fmtDay = (d: Date, withYear: boolean) =>
+  d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', ...(withYear ? { year: 'numeric' } : {}) });
+
+function formatDateRange(startIso: string, endIso: string): string {
+  const s = new Date(startIso);
+  const e = new Date(endIso);
+  if (isNaN(s.getTime())) return '';
+  if (isNaN(e.getTime()) || s.toDateString() === e.toDateString()) return fmtDay(s, true);
+  if (s.getFullYear() === e.getFullYear()) return `${fmtDay(s, false)} to ${fmtDay(e, true)}`;
+  return `${fmtDay(s, true)} to ${fmtDay(e, true)}`;
+}
+
+// Colourful placeholder tiles (used when no poster / gallery photo exists yet)
+const tileStyles = [
+  'from-[#1e9be0] to-[#0a6fbd]',
+  'from-[#ffa05a] to-[#ee6a1c]',
+  'from-[#0a86d2] to-[#07579e]',
+  'from-[#6cc8e6] to-[#2a97d6]',
+  'from-[#fcd04a] to-[#e48f0c]',
+];
+
+const PlaceholderArt: React.FC<{ index?: number; className?: string; iconClass?: string }> = ({
+  index = 0,
+  className = '',
+  iconClass = 'w-5 h-5',
+}) => (
+  <div className={`relative overflow-hidden bg-gradient-to-br ${tileStyles[index % tileStyles.length]} ${className}`}>
+    <span className="absolute -top-6 -right-6 w-28 h-28 rounded-full bg-white/15" />
+    <span className="absolute -bottom-8 -left-8 w-24 h-24 rounded-full bg-white/10" />
+    <Camera className={`absolute inset-0 m-auto text-white/80 ${iconClass}`} />
+  </div>
+);
+
+// ---------------------------------------------------------------------------
+// Event card used on the home page
+// ---------------------------------------------------------------------------
+const HomeEventCard: React.FC<{ event: ClubEvent; index: number }> = ({ event, index }) => {
+  const { labelFor } = useCategories();
+  const [posterFailed, setPosterFailed] = useState(false);
+  const isPast = event.status === 'completed' || new Date(event.end_at).getTime() < Date.now();
+
+  return (
+    <Link
+      to={`/events/${event.id}`}
+      className="group flex min-h-[11.5rem] overflow-hidden rounded-2xl bg-brand-navy text-white shadow-[0_18px_40px_-22px_rgba(7,23,46,0.8)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_24px_50px_-20px_rgba(7,23,46,0.9)]"
+    >
+      {/* Poster */}
+      <div className="relative w-[38%] shrink-0">
+        {event.poster_url && !posterFailed ? (
+          <img
+            src={event.poster_url}
+            alt={event.title}
+            loading="lazy"
+            onError={() => setPosterFailed(true)}
+            className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+          />
+        ) : (
+          <PlaceholderArt index={index} className="absolute inset-0" iconClass="w-6 h-6" />
+        )}
+      </div>
+
+      {/* Details */}
+      <div className="flex flex-1 flex-col p-5 sm:p-6 min-w-0">
+        <span
+          className={`self-start rounded-md px-2 py-1 text-[10px] font-semibold tracking-wide ${
+            isPast ? 'bg-white/10 text-white/70' : 'bg-brand-orange/20 text-[#ffb27d]'
+          }`}
+        >
+          {labelFor(event.category)} · {isPast ? 'Past' : 'Upcoming'}
+        </span>
+
+        <h3 className="mt-3 text-lg sm:text-xl font-extrabold leading-snug tracking-tight line-clamp-3">
+          {event.title}
+        </h3>
+
+        <div className="mt-3 space-y-1.5 text-[11px] text-white/70">
+          <p className="flex items-center gap-2">
+            <Calendar className="h-3.5 w-3.5 shrink-0" />
+            <span>{formatDateRange(event.start_at, event.end_at)}</span>
+          </p>
+          <p className="flex items-center gap-2 min-w-0">
+            <MapPin className="h-3.5 w-3.5 shrink-0" />
+            <span className="truncate">{event.venue || 'Mohan Babu University'}</span>
+          </p>
+        </div>
+
+        <span className="mt-auto pt-4 inline-flex items-center gap-1.5 text-xs font-bold text-brand-orange">
+          View details
+          <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
+        </span>
+      </div>
+    </Link>
+  );
+};
+
+// ---------------------------------------------------------------------------
+// Page
+// ---------------------------------------------------------------------------
 export const HomePage: React.FC = () => {
   const [events, setEvents] = useState<ClubEvent[]>([]);
-  const [crew, setCrew] = useState<CrewMember[]>([]);
+  const [albums, setAlbums] = useState<EventGalleryItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function loadData() {
       try {
-        const [loadedEvents, loadedCrew] = await Promise.all([
-          getEvents(false),
-          getCrew(false),
-        ]);
+        const [loadedEvents, loadedAlbums] = await Promise.all([getEvents(false), getGallery(false)]);
         setEvents(loadedEvents);
-        setCrew(loadedCrew.slice(0, 4)); // Show top 4 leaders on home
+        setAlbums(loadedAlbums);
       } catch (e) {
         console.error('Error loading home data:', e);
       } finally {
@@ -45,399 +129,337 @@ export const HomePage: React.FC = () => {
     loadData();
   }, []);
 
+  // Photos for the scrolling strip: only what the admin added in Event Gallery
+  const galleryPhotos: { url: string; alt: string }[] = [];
+  const seenUrls = new Set<string>();
+  [...albums]
+    .sort((a, b) => new Date(b.event_date).getTime() - new Date(a.event_date).getTime())
+    .forEach((album) => {
+      [album.cover_image_url, ...(album.photos || []).map((p) => p.url)].forEach((url) => {
+        if (url && !seenUrls.has(url) && galleryPhotos.length < 40) {
+          seenUrls.add(url);
+          galleryPhotos.push({ url, alt: album.title });
+        }
+      });
+    });
+  // Repeat short lists so the strip always fills the screen
+  const stripPhotos = galleryPhotos.length
+    ? Array.from({ length: Math.max(1, Math.ceil(8 / galleryPhotos.length)) }, () => galleryPhotos).flat()
+    : [];
+  const stripSeconds = Math.max(30, stripPhotos.length * 5);
+
   const upcomingEvents = events
     .filter((e) => e.status === 'published' && new Date(e.end_at).getTime() >= Date.now())
     .slice(0, 3);
 
+  // Most recent finished events (newest first)
+  const pastEvents = events
+    .filter((e) => e.status === 'completed' || new Date(e.end_at).getTime() < Date.now())
+    .sort((a, b) => new Date(b.end_at).getTime() - new Date(a.end_at).getTime())
+    .slice(0, 4);
+
+  // Hero poster: the newest event that has a poster
+  const latestEvent =
+    [...events]
+      .sort((a, b) => new Date(b.start_at).getTime() - new Date(a.start_at).getTime())
+      .find((e) => e.poster_url) || null;
+
   return (
-    <div className="relative overflow-hidden">
-      {/* Background Cyber Glow Gradients */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-[550px] bg-gradient-to-b from-acm-blue/15 via-acm-cyan/5 to-transparent blur-3xl pointer-events-none -z-10" />
-
+    <div className="bg-white font-jakarta text-brand-navy overflow-hidden">
       {/* ========================================================
-          HERO SECTION
+          HERO
       ======================================================== */}
-      <section className="relative pt-12 pb-20 sm:pt-20 sm:pb-28">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          
-          {/* Chapter Pill Badge */}
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-navy-900/90 border border-acm-cyan/30 text-xs text-acm-light font-mono shadow-glow-sm mb-6 animate-pulse-slow">
-            <Sparkles className="w-3.5 h-3.5 text-acm-cyan" />
-            <span>Mohan Babu University • Official ACM Chapter</span>
+      <section
+        className="relative text-white"
+        style={{
+          background: 'linear-gradient(180deg, #0a86d2 0%, #0870c0 45%, #064a95 100%)',
+          clipPath: 'polygon(0 0, 100% 0, 100% 92%, 0 100%)',
+        }}
+      >
+        {/* decorative dots + rings */}
+        <div
+          className="pointer-events-none absolute inset-y-0 right-0 w-2/3 opacity-60"
+          style={{
+            backgroundImage: 'radial-gradient(rgba(255,255,255,0.28) 1.2px, transparent 1.2px)',
+            backgroundSize: '22px 22px',
+            WebkitMaskImage: 'radial-gradient(circle at 75% 40%, black 0%, transparent 65%)',
+            maskImage: 'radial-gradient(circle at 75% 40%, black 0%, transparent 65%)',
+          }}
+        />
+        <span className="pointer-events-none absolute -right-24 -top-24 h-[34rem] w-[34rem] rounded-full border border-white/10" />
+        <span className="pointer-events-none absolute right-10 top-4 h-[26rem] w-[26rem] rounded-full border border-white/10" />
+
+        <div className="relative mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 pt-14 pb-28 sm:pt-16 sm:pb-32 lg:pb-40 grid items-center gap-12 lg:grid-cols-[1.1fr_0.9fr]">
+          {/* Text */}
+          <div>
+            <h1 className="text-5xl sm:text-6xl lg:text-7xl font-extrabold leading-[1.02] tracking-[-0.04em]">
+              Code together.
+              <br />
+              <span className="text-brand-orange">Grow together.</span>
+            </h1>
+            <p className="mt-6 max-w-md text-[15px] sm:text-base leading-relaxed text-white/85">
+              Workshops, hackathons and coding contests for engineering students at Mohan Babu University, run by
+              students like you.
+            </p>
+            <div className="mt-8 flex flex-wrap items-center gap-3">
+              <Link
+                to="/events"
+                className="inline-flex items-center gap-2 rounded-xl bg-brand-orange px-6 py-3 text-sm font-bold text-white shadow-[0_12px_28px_-10px_rgba(249,123,44,0.9)] transition-all hover:-translate-y-0.5 hover:brightness-110"
+              >
+                See events <ArrowRight className="h-4 w-4" />
+              </Link>
+              <Link
+                to="/about"
+                className="inline-flex items-center rounded-xl border border-white/70 px-6 py-3 text-sm font-bold text-white transition-colors hover:bg-white hover:text-brand-blue"
+              >
+                About the chapter
+              </Link>
+            </div>
           </div>
 
-          {/* Main Headline */}
-          <h1 className="font-display font-black text-4xl sm:text-6xl lg:text-7xl tracking-tight text-white max-w-4xl mx-auto leading-[1.1]">
-            Where Code Meets Ambition,{' '}
-            <span className="text-gradient-acm">
-              Innovation Ignites.
-            </span>
-          </h1>
-
-          {/* Subtitle */}
-          <p className="mt-6 text-base sm:text-xl text-slate-300 max-w-2xl mx-auto leading-relaxed">
-            Welcome to the premier computing community at Mohan Babu University. We build cutting-edge systems, conquer national hackathons, and shape tomorrow’s tech leaders.
-          </p>
-
-          {/* Action CTAs */}
-          <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
+          {/* Latest event poster */}
+          <div className="relative mx-auto w-full max-w-[19rem] sm:max-w-[21rem] lg:ml-auto lg:mr-6">
             <Link
-              to="/events"
-              className="btn-acm-primary px-7 py-3 text-base shadow-glow hover:shadow-glow-lg"
+              to={events.length ? `/events/${events[0].id}` : '/events'}
+              className="block rotate-[5deg] rounded-2xl bg-white p-1.5 shadow-[0_30px_60px_-20px_rgba(2,24,58,0.8)] transition-transform duration-300 hover:rotate-[3deg] hover:scale-[1.02]"
+              aria-label={latestEvent ? `Latest event: ${latestEvent.title}` : 'See events'}
             >
-              <span>Explore Events & Hackathons</span>
-              <ArrowRight className="w-4 h-4" />
+              <div className="relative aspect-[4/5] overflow-hidden rounded-xl bg-brand-navy">
+                {latestEvent?.poster_url ? (
+                  <img
+                    src={latestEvent.poster_url}
+                    alt={latestEvent.title}
+                    className="absolute inset-0 h-full w-full object-cover"
+                  />
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-[#1e9be0] to-[#064a95]">
+                    <img src="/logo.png" alt="" className="h-28 w-28 rounded-full bg-white object-contain p-1" />
+                  </div>
+                )}
+              </div>
             </Link>
-            <Link
-              to="/about"
-              className="btn-acm-secondary px-6 py-3 text-base"
-            >
-              <span>About Chapter</span>
-            </Link>
-          </div>
 
-          {/* Interactive Stats Grid */}
-          <div className="mt-16 grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto text-left">
-            <div className="glass-panel p-5 border border-slate-800">
-              <div className="flex items-center justify-between text-acm-cyan mb-2">
-                <Users className="w-5 h-5" />
-                <span className="text-[10px] font-mono uppercase text-slate-400">Community</span>
+            {latestEvent && (
+              <div className="absolute -top-3 right-0 sm:-right-6 max-w-[11.5rem] rotate-[5deg] rounded-xl bg-white px-3 py-2 text-brand-navy shadow-xl">
+                <p className="text-[9px] font-medium text-slate-400">Latest event</p>
+                <p className="text-[12px] font-extrabold leading-tight line-clamp-2">{latestEvent.title}</p>
               </div>
-              <p className="font-display font-bold text-2xl sm:text-3xl text-white">500+</p>
-              <p className="text-xs text-slate-400 mt-1">Active Student Members</p>
-            </div>
+            )}
 
-            <div className="glass-panel p-5 border border-slate-800">
-              <div className="flex items-center justify-between text-purple-400 mb-2">
-                <Calendar className="w-5 h-5" />
-                <span className="text-[10px] font-mono uppercase text-slate-400">Initiatives</span>
-              </div>
-              <p className="font-display font-bold text-2xl sm:text-3xl text-white">25+</p>
-              <p className="text-xs text-slate-400 mt-1">Annual Tech Workshops</p>
-            </div>
-
-            <div className="glass-panel p-5 border border-slate-800">
-              <div className="flex items-center justify-between text-amber-400 mb-2">
-                <Trophy className="w-5 h-5" />
-                <span className="text-[10px] font-mono uppercase text-slate-400">Hackathons</span>
-              </div>
-              <p className="font-display font-bold text-2xl sm:text-3xl text-white">₹1.5L+</p>
-              <p className="text-xs text-slate-400 mt-1">Prizes & Bounties</p>
-            </div>
-
-            <div className="glass-panel p-5 border border-slate-800">
-              <div className="flex items-center justify-between text-emerald-400 mb-2">
-                <Terminal className="w-5 h-5" />
-                <span className="text-[10px] font-mono uppercase text-slate-400">Excellence</span>
-              </div>
-              <p className="font-display font-bold text-2xl sm:text-3xl text-white">100%</p>
-              <p className="text-xs text-slate-400 mt-1">Student Driven & Mentored</p>
+            <div className="absolute -bottom-5 -left-5 flex h-20 w-20 flex-col items-center justify-center rounded-full bg-brand-orange text-white shadow-[0_14px_30px_-10px_rgba(249,123,44,0.9)]">
+              <span className="text-2xl font-extrabold leading-none">{events.length}</span>
+              <span className="mt-0.5 text-[10px] font-semibold">teams</span>
             </div>
           </div>
-
         </div>
       </section>
 
       {/* ========================================================
-          UPCOMING EVENTS HIGHLIGHT
+          EVENTS
       ======================================================== */}
-      <section className="py-16 bg-navy-900/40 border-y border-slate-800/60">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-10 gap-4">
+      <section className="pt-16 pb-20 sm:pt-20">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+          <div className="mb-8 flex items-end justify-between gap-4">
             <div>
-              <div className="inline-flex items-center gap-1.5 text-xs font-mono text-acm-cyan mb-2 uppercase tracking-wider font-semibold">
-                <Calendar className="w-3.5 h-3.5" /> What’s Happening
-              </div>
-              <h2 className="font-display font-bold text-3xl sm:text-4xl text-white tracking-tight">
-                Featured & Upcoming Events
+              <p className="text-[11px] font-bold text-brand-blue">What’s on</p>
+              <h2 className="mt-2 text-3xl sm:text-4xl font-extrabold tracking-[-0.03em]">
+                Events at <span className="text-brand-blue">MBU ACM</span>
               </h2>
+              <p className="mt-3 text-[13px] text-slate-500">Register for each event on its own page.</p>
             </div>
             <Link
               to="/events"
-              className="inline-flex items-center gap-2 text-sm font-semibold text-acm-light hover:text-white transition-colors"
+              className="hidden sm:inline-flex items-center gap-1.5 text-xs font-bold text-brand-blue hover:text-brand-navy transition-colors"
             >
-              <span>View All Events ({events.length})</span>
-              <ArrowRight className="w-4 h-4" />
+              All events <ArrowRight className="h-3.5 w-3.5" />
             </Link>
           </div>
 
           {loading ? (
-            <LoadingSpinner message="Loading upcoming chapter events..." />
-          ) : upcomingEvents.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {upcomingEvents.map((event) => (
-                <EventCard key={event.id} event={event} />
-              ))}
-            </div>
+            <LoadingSpinner message="Loading chapter events..." />
           ) : (
-            <div className="glass-panel p-10 text-center text-slate-400">
-              <Calendar className="w-12 h-12 text-slate-600 mx-auto mb-3" />
-              <p className="text-base text-slate-300 font-medium">No upcoming events scheduled right now.</p>
-              <p className="text-xs text-slate-400 mt-1">Check back soon for new hackathons and workshops!</p>
+            <div className="space-y-5">
+              {(pastEvents.length > 0 || upcomingEvents.length > 0) && (
+                <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+                  {pastEvents.map((event, i) => (
+                    <HomeEventCard key={event.id} event={event} index={i} />
+                  ))}
+                  {upcomingEvents.map((event, i) => (
+                    <HomeEventCard key={event.id} event={event} index={pastEvents.length + i} />
+                  ))}
+                </div>
+              )}
+
+              {upcomingEvents.length === 0 && (
+                <div className="flex items-center gap-4 rounded-2xl border-l-4 border-brand-orange bg-brand-mist px-5 py-5 sm:px-6">
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white text-brand-orange shadow-sm">
+                    <Calendar className="h-5 w-5" />
+                  </span>
+                  <div>
+                    <p className="text-sm font-extrabold">Next event: coming soon</p>
+                    <p className="mt-1 text-xs text-slate-500">
+                      Nothing is scheduled right now. New events are posted here as soon as they are confirmed.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              <Link
+                to="/events"
+                className="sm:hidden inline-flex items-center gap-1.5 text-xs font-bold text-brand-blue"
+              >
+                All events <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
             </div>
           )}
         </div>
       </section>
 
       {/* ========================================================
-          CHAPTER PILLARS
+          TEAMS
       ======================================================== */}
-      <section className="py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-2xl mx-auto mb-16">
-            <span className="text-xs font-mono uppercase tracking-widest text-acm-cyan font-semibold">
-              The Four Pillars of MBU ACM
-            </span>
-            <h2 className="font-display font-bold text-3xl sm:text-4xl text-white mt-2 tracking-tight">
-              Fueling Your Engineering Journey
-            </h2>
-            <p className="text-sm sm:text-base text-slate-400 mt-3">
-              We provide the ecosystem, resources, and peers needed to transform curious students into world-class software engineers.
+      <section className="bg-brand-mist py-16 sm:py-20">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+          <div className="mb-10 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+            <div>
+              <p className="text-[11px] font-bold text-brand-blue">Our teams</p>
+              <h2 className="mt-2 text-3xl sm:text-4xl font-extrabold tracking-[-0.03em]">
+                Six teams. <span className="text-brand-blue">One chapter.</span>
+              </h2>
+            </div>
+            <p className="max-w-xs text-[13px] leading-relaxed text-slate-500">
+              Behind every event is a team of students. Find the one that fits what you enjoy.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {/* Pillar 1 */}
-            <div className="glass-panel p-6 border border-slate-800/80 hover:border-acm-cyan/40 transition-all duration-300 group">
-              <div className="w-12 h-12 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-acm-cyan mb-5 group-hover:scale-110 transition-transform">
-                <Rocket className="w-6 h-6" />
-              </div>
-              <h3 className="font-display font-bold text-lg text-white group-hover:text-acm-cyan transition-colors">
-                Hackathons & Sprints
-              </h3>
-              <p className="text-xs text-slate-300 leading-relaxed mt-2.5">
-                From fast-paced internal ideathons to the 36-hour national HackSprint, build real-world solutions under real-time constraints.
-              </p>
-            </div>
-
-            {/* Pillar 2 */}
-            <div className="glass-panel p-6 border border-slate-800/80 hover:border-acm-cyan/40 transition-all duration-300 group">
-              <div className="w-12 h-12 rounded-xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-400 mb-5 group-hover:scale-110 transition-transform">
-                <Cpu className="w-6 h-6" />
-              </div>
-              <h3 className="font-display font-bold text-lg text-white group-hover:text-purple-300 transition-colors">
-                Cutting-Edge Workshops
-              </h3>
-              <p className="text-xs text-slate-300 leading-relaxed mt-2.5">
-                Hands-on masterclasses in Generative AI, Cloud Systems, Kubernetes, Web3, and Full Stack Engineering by student mentors and guests.
-              </p>
-            </div>
-
-            {/* Pillar 3 */}
-            <div className="glass-panel p-6 border border-slate-800/80 hover:border-acm-cyan/40 transition-all duration-300 group">
-              <div className="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 mb-5 group-hover:scale-110 transition-transform">
-                <Code2 className="w-6 h-6" />
-              </div>
-              <h3 className="font-display font-bold text-lg text-white group-hover:text-amber-300 transition-colors">
-                Competitive Coding (CP)
-              </h3>
-              <p className="text-xs text-slate-300 leading-relaxed mt-2.5">
-                Rigorous algorithmic preparation for ICPC, Codeforces rounds, and FAANG interviews with dedicated problem-solving cohorts.
-              </p>
-            </div>
-
-            {/* Pillar 4 */}
-            <div className="glass-panel p-6 border border-slate-800/80 hover:border-acm-cyan/40 transition-all duration-300 group">
-              <div className="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 mb-5 group-hover:scale-110 transition-transform">
-                <BookOpen className="w-6 h-6" />
-              </div>
-              <h3 className="font-display font-bold text-lg text-white group-hover:text-emerald-300 transition-colors">
-                Research & Mentorship
-              </h3>
-              <p className="text-xs text-slate-300 leading-relaxed mt-2.5">
-                Connect with ACM Digital Library resources, faculty mentors, and alumni working in top research labs and global tech giants.
-              </p>
-            </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {teams.map((team, i) => {
+              const Icon = team.icon;
+              return (
+                <Link
+                  key={team.name}
+                  to="/about"
+                  className="group relative overflow-hidden rounded-2xl border border-slate-200/70 bg-white p-6 shadow-[0_8px_24px_-18px_rgba(10,35,66,0.35)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_18px_36px_-18px_rgba(10,134,210,0.5)]"
+                >
+                  <span className="absolute right-4 top-2 text-5xl font-extrabold tracking-tight text-slate-100 select-none">
+                    {String(i + 1).padStart(2, '0')}
+                  </span>
+                  <span className="relative flex h-11 w-11 items-center justify-center rounded-xl bg-brand-blue text-white">
+                    <Icon className="h-5 w-5" />
+                  </span>
+                  <h3 className="relative mt-5 text-[15px] font-extrabold leading-tight">{team.name}</h3>
+                  <p className="relative mt-1 text-[11px] font-semibold text-brand-blue">{team.tagline}</p>
+                  <p className="relative mt-3 text-xs leading-relaxed text-slate-500">{team.summary}</p>
+                </Link>
+              );
+            })}
           </div>
         </div>
       </section>
 
       {/* ========================================================
-          CREW SPOTLIGHT
+          GALLERY STRIP
       ======================================================== */}
-      <section className="py-16 bg-navy-900/30 border-t border-slate-800/60">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-10 gap-4">
+      <section className="bg-brand-navy pt-16 sm:pt-20 pb-14 text-white">
+        <style>{`
+          @keyframes acm-marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+          .acm-marquee-track { animation: acm-marquee var(--acm-dur, 40s) linear infinite; }
+          .acm-marquee:hover .acm-marquee-track { animation-play-state: paused; }
+          @media (prefers-reduced-motion: reduce) {
+            .acm-marquee { overflow-x: auto; }
+            .acm-marquee-track { animation: none; }
+          }
+        `}</style>
+
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+          <div className="mb-10 flex items-end justify-between gap-4">
             <div>
-              <span className="text-xs font-mono uppercase tracking-wider text-acm-cyan font-semibold">
-                People Behind the Chapter
-              </span>
-              <h2 className="font-display font-bold text-3xl sm:text-4xl text-white tracking-tight mt-1">
-                Executive Leadership
+              <p className="text-[11px] font-bold text-brand-orange">Gallery</p>
+              <h2 className="mt-2 text-3xl sm:text-4xl font-extrabold tracking-[-0.03em]">
+                Life at <span className="text-brand-orange">ACM</span>
               </h2>
+              <p className="mt-3 text-[13px] text-white/60">Photos from our events, workshops and activities.</p>
             </div>
             <Link
-              to="/crew"
-              className="inline-flex items-center gap-2 text-sm font-semibold text-acm-light hover:text-white transition-colors"
+              to="/gallery"
+              className="hidden sm:inline-flex items-center gap-1.5 text-xs font-bold text-white/80 hover:text-white transition-colors"
             >
-              <span>View All Crew Members</span>
-              <ArrowRight className="w-4 h-4" />
+              View all photos <ArrowRight className="h-3.5 w-3.5" />
             </Link>
           </div>
+        </div>
 
-          {loading ? (
-            <LoadingSpinner message="Loading crew highlights..." />
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {crew.map((member) => (
-                <CrewCard key={member.id} member={member} />
+        {stripPhotos.length > 0 ? (
+          /* Auto-scrolling photo strip (pauses on hover) */
+          <div className="acm-marquee">
+            <div
+              className="acm-marquee-track flex w-max items-start"
+              style={{ '--acm-dur': `${stripSeconds}s` } as React.CSSProperties}
+            >
+              {[...stripPhotos, ...stripPhotos].map((photo, i) => (
+                <Link
+                  key={i}
+                  to="/gallery"
+                  className={`shrink-0 pr-5 ${i % 2 ? 'mt-6' : ''}`}
+                  aria-hidden={i >= stripPhotos.length}
+                  tabIndex={i >= stripPhotos.length ? -1 : 0}
+                >
+                  <img
+                    src={photo.url}
+                    alt={i >= stripPhotos.length ? '' : photo.alt}
+                    loading="lazy"
+                    className="h-64 w-48 sm:h-72 sm:w-56 rounded-2xl object-cover"
+                  />
+                </Link>
               ))}
             </div>
-          )}
-        </div>
+          </div>
+        ) : (
+          /* No photos added yet: show placeholder tiles */
+          <div className="flex justify-center overflow-hidden">
+            <div className="flex shrink-0 items-start gap-5">
+              {Array.from({ length: 9 }, (_, i) => (
+                <PlaceholderArt
+                  key={i}
+                  index={i}
+                  iconClass="w-5 h-5"
+                  className={`h-64 w-48 sm:h-72 sm:w-56 shrink-0 rounded-2xl ${i % 2 ? 'mt-6' : ''}`}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
+        <Link
+          to="/gallery"
+          className="sm:hidden mx-4 mt-8 inline-flex items-center gap-1.5 text-xs font-bold text-white/80"
+        >
+          View all photos <ArrowRight className="h-3.5 w-3.5" />
+        </Link>
       </section>
 
       {/* ========================================================
-          EVENT GALLERY & MEMORY VAULT SPOTLIGHT
+          JOIN BANNER (sits across the gallery / footer edge)
       ======================================================== */}
-      <section className="py-20 border-t border-slate-800/60 relative">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-4">
+      <section
+        className="px-4 sm:px-6 lg:px-8"
+        style={{ background: 'linear-gradient(to bottom, #0a2342 50%, #07172e 50%)' }}
+      >
+        <div className="relative mx-auto max-w-6xl overflow-hidden rounded-3xl bg-gradient-to-r from-[#0a86d2] to-[#0a72be] px-6 py-9 sm:px-12 shadow-[0_24px_60px_-24px_rgba(10,134,210,0.9)]">
+          <span className="pointer-events-none absolute -right-16 -top-20 h-64 w-64 rounded-full bg-white/10" />
+          <div className="relative flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
             <div>
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-acm-cyan/15 text-acm-light border border-acm-cyan/30 text-xs font-mono font-semibold uppercase tracking-wider mb-3">
-                <Images className="w-3.5 h-3.5 text-acm-cyan" />
-                <span>Chapter Memories & Archives</span>
-              </div>
-              <h2 className="font-display font-black text-3xl sm:text-4xl text-white tracking-tight">
-                Relive Past Events & <span className="text-gradient-acm">Moments</span>
-              </h2>
-              <p className="text-sm sm:text-base text-slate-300 mt-2 max-w-xl">
-                Browse through photographs, student prototypes, mentor sessions, and awards ceremonies from our previous hackathons and tech bootcamps.
+              <h2 className="text-2xl sm:text-3xl font-extrabold tracking-[-0.03em] text-white">Want to join a team?</h2>
+              <p className="mt-2 text-[13px] text-white/85">
+                Write to us and tell us which team you are interested in.
               </p>
             </div>
-
             <Link
-              to="/gallery"
-              className="btn-acm-secondary text-xs sm:text-sm px-5 py-2.5 flex items-center gap-2 self-start md:self-auto group"
+              to="/contact"
+              className="inline-flex shrink-0 items-center justify-center gap-2 self-start rounded-xl bg-white px-6 py-3 text-sm font-bold text-brand-blue shadow-lg transition-all hover:-translate-y-0.5 md:self-auto"
             >
-              <span>Explore All Event Photos</span>
-              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              Contact the chapter <ArrowRight className="h-4 w-4" />
             </Link>
-          </div>
-
-          {/* Visual Gallery Strip */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            <Link
-              to="/gallery"
-              className="glass-panel group overflow-hidden rounded-2xl border border-slate-800 hover:border-acm-cyan/50 hover:shadow-glow transition-all"
-            >
-              <div className="relative h-48 overflow-hidden bg-navy-900">
-                <img
-                  src="https://images.unsplash.com/photo-1504384308090-c894fdcc538d?auto=format&fit=crop&q=80&w=800"
-                  alt="HackSphere 2025"
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-navy-950 via-navy-950/20 to-transparent" />
-                <span className="absolute top-3 left-3 text-[10px] font-mono px-2.5 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/40 font-bold uppercase">
-                  Hackathon
-                </span>
-                <span className="absolute bottom-3 right-3 text-xs font-mono text-cyan-300 bg-navy-950/80 px-2 py-0.5 rounded border border-slate-700/60">
-                  📸 5 Photos
-                </span>
-              </div>
-              <div className="p-5">
-                <h3 className="font-display font-bold text-base text-white group-hover:text-acm-cyan transition-colors">
-                  MBU HackSphere 2025: 24-Hour National Hackathon
-                </h3>
-                <p className="text-xs text-slate-400 mt-1.5 line-clamp-2">
-                  Over 200+ students built AI and Web3 solutions under mentorship from industry architects.
-                </p>
-              </div>
-            </Link>
-
-            <Link
-              to="/gallery"
-              className="glass-panel group overflow-hidden rounded-2xl border border-slate-800 hover:border-acm-cyan/50 hover:shadow-glow transition-all"
-            >
-              <div className="relative h-48 overflow-hidden bg-navy-900">
-                <img
-                  src="https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?auto=format&fit=crop&q=80&w=800"
-                  alt="Generative AI Masterclass"
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-navy-950 via-navy-950/20 to-transparent" />
-                <span className="absolute top-3 left-3 text-[10px] font-mono px-2.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 font-bold uppercase">
-                  Workshop
-                </span>
-                <span className="absolute bottom-3 right-3 text-xs font-mono text-cyan-300 bg-navy-950/80 px-2 py-0.5 rounded border border-slate-700/60">
-                  📸 3 Photos
-                </span>
-              </div>
-              <div className="p-5">
-                <h3 className="font-display font-bold text-base text-white group-hover:text-acm-cyan transition-colors">
-                  Generative AI & Transformer Architectures
-                </h3>
-                <p className="text-xs text-slate-400 mt-1.5 line-clamp-2">
-                  Hands-on coding lab covering vector indexing, RAG systems, and LLM fine-tuning.
-                </p>
-              </div>
-            </Link>
-
-            <Link
-              to="/gallery"
-              className="glass-panel group overflow-hidden rounded-2xl border border-slate-800 hover:border-acm-cyan/50 hover:shadow-glow transition-all"
-            >
-              <div className="relative h-48 overflow-hidden bg-navy-900">
-                <img
-                  src="https://images.unsplash.com/photo-1523580494863-6f3031224c94?auto=format&fit=crop&q=80&w=800"
-                  alt="ACM Induction Expo"
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-navy-950 via-navy-950/20 to-transparent" />
-                <span className="absolute top-3 left-3 text-[10px] font-mono px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold uppercase">
-                  Campus Expo
-                </span>
-                <span className="absolute bottom-3 right-3 text-xs font-mono text-cyan-300 bg-navy-950/80 px-2 py-0.5 rounded border border-slate-700/60">
-                  📸 3 Photos
-                </span>
-              </div>
-              <div className="p-5">
-                <h3 className="font-display font-bold text-base text-white group-hover:text-acm-cyan transition-colors">
-                  ACM Chapter Induction & Annual Tech Expo
-                </h3>
-                <p className="text-xs text-slate-400 mt-1.5 line-clamp-2">
-                  300+ students joined hands-on robotics exhibits, open source roadmaps, and student stalls.
-                </p>
-              </div>
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* ========================================================
-          CALL TO ACTION BANNER
-      ======================================================== */}
-      <section className="py-20 relative">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="relative rounded-3xl p-8 sm:p-12 overflow-hidden bg-gradient-to-br from-navy-900 via-navy-850 to-navy-950 border border-acm-cyan/30 shadow-glow">
-            <div className="absolute top-0 right-0 w-80 h-80 bg-acm-cyan/15 rounded-full blur-3xl pointer-events-none" />
-            <div className="relative z-10 max-w-2xl">
-              <span className="px-3 py-1 rounded-full bg-acm-cyan/20 text-acm-light text-xs font-mono font-semibold uppercase tracking-wider border border-acm-cyan/30">
-                Join Mohan Babu University ACM
-              </span>
-              <h2 className="font-display font-black text-3xl sm:text-4xl text-white mt-4 tracking-tight leading-tight">
-                Ready to level up your engineering skills?
-              </h2>
-              <p className="text-sm sm:text-base text-slate-300 mt-3 leading-relaxed">
-                Create your student account today to access priority event registration, digital badges, workshop resources, and chapter mentorship.
-              </p>
-
-              <div className="mt-8 flex flex-wrap gap-4">
-                <Link
-                  to="/signup"
-                  className="btn-acm-primary px-6 py-3 text-sm font-semibold"
-                >
-                  <Sparkles className="w-4 h-4" />
-                  <span>Create Student Account</span>
-                </Link>
-                <Link
-                  to="/contact"
-                  className="btn-acm-secondary px-6 py-3 text-sm"
-                >
-                  <span>Contact Chapter Team</span>
-                </Link>
-              </div>
-            </div>
           </div>
         </div>
       </section>

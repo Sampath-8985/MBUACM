@@ -1,22 +1,11 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { 
-  Menu, 
-  X, 
-  Shield, 
-  User, 
-  LogOut, 
-  Calendar, 
-  ChevronDown, 
-  Sparkles,
-  LayoutDashboard
-} from 'lucide-react';
+import { Menu, X, Shield, LogOut } from 'lucide-react';
 
 export const Navbar: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const [userDropdownOpen, setUserDropdownOpen] = useState(false);
-  const { user, profile, role, isAdmin, isAuthenticated, logout } = useAuth();
+  const { isAdmin, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -25,167 +14,90 @@ export const Navbar: React.FC = () => {
     { name: 'About', path: '/about' },
     { name: 'Events', path: '/events' },
     { name: 'Gallery', path: '/gallery' },
-    { name: 'Crew', path: '/crew' },
-    { name: 'Contact', path: '/contact' },
+    { name: 'Core Team', path: '/crew' },
+    { name: 'Contact Us', path: '/contact' },
   ];
 
   const isActive = (path: string) => {
-    if (path === '/') return location.pathname === '/';
     return location.pathname.startsWith(path);
   };
 
   const handleLogout = async () => {
     await logout();
-    setUserDropdownOpen(false);
     navigate('/');
   };
 
   return (
-    <header className="sticky top-0 z-50 glass-nav transition-all">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-20">
-          
+    <header className="sticky top-0 z-50 bg-brand-blue font-jakarta text-white shadow-[0_8px_24px_-16px_rgba(4,40,90,0.7)]">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-[72px] gap-6">
+
           {/* Logo & Chapter Brand */}
-          <Link to="/" className="flex items-center gap-3 group">
-            <div className="relative w-12 h-12 rounded-full p-0.5 bg-gradient-to-tr from-acm-blue via-cyan-400 to-acm-light shadow-glow-sm group-hover:shadow-glow group-hover:scale-105 transition-all shrink-0">
-              <img
-                src="/logo.png"
-                alt="MBU ACM Student Chapter Logo"
-                className="w-full h-full object-contain rounded-full bg-navy-950 p-0.5"
-              />
-            </div>
-            <div className="flex flex-col">
-              <div className="flex items-center gap-2">
-                <span className="font-display font-extrabold text-xl tracking-tight text-white group-hover:text-acm-cyan transition-colors">
-                  MBU ACM
-                </span>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-acm-cyan/15 text-acm-light border border-acm-cyan/30 uppercase tracking-wider font-semibold">
-                  Chapter
-                </span>
-              </div>
-              <span className="text-xs text-slate-400 font-medium">Mohan Babu University</span>
+          <Link to="/" className="flex items-center gap-3 group shrink-0">
+            <img
+              src="/logo.png"
+              alt="MBU ACM Student Chapter Logo"
+              className="w-10 h-10 rounded-full object-contain bg-white ring-2 ring-white/80 group-hover:scale-105 transition-transform"
+            />
+            <div className="flex flex-col leading-tight">
+              <span className="font-bold text-[15px] tracking-tight">ACM Student Chapter</span>
+              <span className="text-[11px] text-white/75 font-medium">Mohan Babu University</span>
             </div>
           </Link>
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center space-x-1 lg:space-x-2">
+          <nav className="hidden md:flex items-center gap-6 lg:gap-8">
             {navLinks.map((link) => (
               <Link
                 key={link.path}
                 to={link.path}
-                className={`px-3.5 py-2 rounded-xl text-sm font-medium transition-all ${
+                className={`relative py-2 text-[13px] transition-colors ${
                   isActive(link.path)
-                    ? 'text-white bg-slate-800/80 shadow-sm border border-slate-700/60'
-                    : 'text-slate-300 hover:text-white hover:bg-slate-800/40'
+                    ? 'font-bold text-white'
+                    : 'font-medium text-white/80 hover:text-white'
                 }`}
               >
                 {link.name}
+                {isActive(link.path) && (
+                  <span className="absolute left-0 -bottom-0.5 h-[3px] w-5 rounded-full bg-brand-orange" />
+                )}
               </Link>
             ))}
           </nav>
 
-          {/* Auth & Action Buttons */}
-          <div className="hidden md:flex items-center gap-3">
-            {isAuthenticated ? (
-              <div className="relative">
+          {/* Right side: contact button + admin shortcuts (admin only after sign-in) */}
+          <div className="hidden md:flex items-center gap-2 shrink-0">
+            {isAdmin && (
+              <>
+                <Link
+                  to="/admin"
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold text-white bg-brand-navy/40 border border-white/25 hover:bg-brand-navy/60 transition-colors"
+                >
+                  <Shield className="w-4 h-4" />
+                  <span>Admin Panel</span>
+                </Link>
                 <button
-                  onClick={() => setUserDropdownOpen(!userDropdownOpen)}
-                  className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-navy-900 border border-slate-700/80 hover:border-acm-cyan/40 transition-colors"
+                  onClick={handleLogout}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium text-white/90 hover:bg-white/10 transition-colors"
                 >
-                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-acm-blue/30 to-purple-500/30 border border-acm-cyan/30 flex items-center justify-center text-xs font-bold text-acm-light">
-                    {profile?.full_name ? profile.full_name.charAt(0).toUpperCase() : user?.email?.charAt(0).toUpperCase()}
-                  </div>
-                  <div className="text-left hidden lg:block">
-                    <p className="text-xs font-semibold text-slate-200 truncate max-w-[120px]">
-                      {profile?.full_name || 'My Account'}
-                    </p>
-                    <p className="text-[10px] text-slate-400 uppercase tracking-wider flex items-center gap-1 font-mono">
-                      {isAdmin ? (
-                        <span className="text-purple-400 font-bold flex items-center gap-0.5">
-                          <Shield className="w-2.5 h-2.5" /> Admin
-                        </span>
-                      ) : (
-                        <span>Student</span>
-                      )}
-                    </p>
-                  </div>
-                  <ChevronDown className="w-4 h-4 text-slate-400" />
+                  <LogOut className="w-4 h-4" />
+                  <span>Log Out</span>
                 </button>
-
-                {/* Dropdown Menu */}
-                {userDropdownOpen && (
-                  <div 
-                    className="absolute right-0 mt-2 w-56 rounded-2xl glass-panel shadow-2xl p-2 z-50 animate-in fade-in slide-in-from-top-2 border border-slate-700/90"
-                    onMouseLeave={() => setUserDropdownOpen(false)}
-                  >
-                    <div className="px-3 py-2 border-b border-slate-800 mb-1">
-                      <p className="text-xs text-slate-400">Signed in as</p>
-                      <p className="text-xs font-semibold text-slate-100 truncate">{user?.email}</p>
-                    </div>
-
-                    {isAdmin && (
-                      <Link
-                        to="/admin"
-                        onClick={() => setUserDropdownOpen(false)}
-                        className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-purple-300 hover:bg-purple-950/40 hover:text-purple-200 transition-colors"
-                      >
-                        <Shield className="w-4 h-4 text-purple-400" />
-                        <span>Admin Dashboard</span>
-                      </Link>
-                    )}
-
-                    <Link
-                      to="/dashboard"
-                      onClick={() => setUserDropdownOpen(false)}
-                      className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-slate-200 hover:bg-slate-800/70 transition-colors"
-                    >
-                      <LayoutDashboard className="w-4 h-4 text-acm-cyan" />
-                      <span>User Dashboard</span>
-                    </Link>
-
-                    <Link
-                      to="/profile"
-                      onClick={() => setUserDropdownOpen(false)}
-                      className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-slate-200 hover:bg-slate-800/70 transition-colors"
-                    >
-                      <User className="w-4 h-4 text-slate-400" />
-                      <span>My Profile</span>
-                    </Link>
-
-                    <button
-                      onClick={handleLogout}
-                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-rose-400 hover:bg-rose-950/30 transition-colors text-left"
-                    >
-                      <LogOut className="w-4 h-4 text-rose-400" />
-                      <span>Log Out</span>
-                    </button>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="flex items-center gap-2.5">
-                <Link
-                  to="/login"
-                  className="px-4 py-2 text-sm font-medium text-slate-300 hover:text-white transition-colors"
-                >
-                  Sign In
-                </Link>
-                <Link
-                  to="/signup"
-                  className="btn-acm-primary text-sm py-2 px-4.5"
-                >
-                  <Sparkles className="w-3.5 h-3.5" />
-                  <span>Join ACM</span>
-                </Link>
-              </div>
+              </>
             )}
+            <Link
+              to="/contact"
+              className="px-4 py-2 rounded-lg border border-white/70 text-[13px] font-semibold hover:bg-white hover:text-brand-blue transition-colors"
+            >
+              Contact us
+            </Link>
           </div>
 
           {/* Mobile Menu Button */}
           <div className="flex md:hidden items-center gap-2">
             <button
               onClick={() => setIsOpen(!isOpen)}
-              className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800/60 focus:outline-none"
+              className="p-2 rounded-lg text-white hover:bg-white/10 focus:outline-none"
               aria-label="Toggle menu"
             >
               {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
@@ -197,80 +109,42 @@ export const Navbar: React.FC = () => {
 
       {/* Mobile Drawer */}
       {isOpen && (
-        <div className="md:hidden glass-panel border-t border-slate-800 px-4 pt-3 pb-6 space-y-2">
+        <div className="md:hidden bg-brand-deep border-t border-white/15 px-4 pt-3 pb-6 space-y-1">
           {navLinks.map((link) => (
             <Link
               key={link.path}
               to={link.path}
               onClick={() => setIsOpen(false)}
-              className={`block px-3 py-2.5 rounded-xl text-base font-medium ${
+              className={`block px-3 py-2.5 rounded-lg text-base ${
                 isActive(link.path)
-                  ? 'text-white bg-slate-800 font-semibold'
-                  : 'text-slate-300 hover:bg-slate-800/50'
+                  ? 'bg-white/15 font-bold text-white'
+                  : 'font-medium text-white/85 hover:bg-white/10'
               }`}
             >
               {link.name}
             </Link>
           ))}
 
-          <div className="pt-4 border-t border-slate-800 space-y-2">
-            {isAuthenticated ? (
-              <>
-                <div className="px-3 py-1 text-xs text-slate-400 font-mono">
-                  Signed in as <strong className="text-slate-200">{profile?.full_name || user?.email}</strong>
-                </div>
-                {isAdmin && (
-                  <Link
-                    to="/admin"
-                    onClick={() => setIsOpen(false)}
-                    className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-purple-900/30 text-purple-300 font-semibold text-sm"
-                  >
-                    <Shield className="w-4 h-4" /> Admin Dashboard
-                  </Link>
-                )}
-                <Link
-                  to="/dashboard"
-                  onClick={() => setIsOpen(false)}
-                  className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-slate-200 hover:bg-slate-800 text-sm"
-                >
-                  <LayoutDashboard className="w-4 h-4 text-acm-cyan" /> User Dashboard
-                </Link>
-                <Link
-                  to="/profile"
-                  onClick={() => setIsOpen(false)}
-                  className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-slate-200 hover:bg-slate-800 text-sm"
-                >
-                  <User className="w-4 h-4" /> Profile Details
-                </Link>
-                <button
-                  onClick={() => {
-                    handleLogout();
-                    setIsOpen(false);
-                  }}
-                  className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-rose-400 hover:bg-rose-950/30 text-sm font-medium"
-                >
-                  <LogOut className="w-4 h-4" /> Log Out
-                </button>
-              </>
-            ) : (
-              <div className="grid grid-cols-2 gap-2 pt-2">
-                <Link
-                  to="/login"
-                  onClick={() => setIsOpen(false)}
-                  className="text-center py-2.5 rounded-xl bg-navy-800 text-slate-200 text-sm font-medium"
-                >
-                  Sign In
-                </Link>
-                <Link
-                  to="/signup"
-                  onClick={() => setIsOpen(false)}
-                  className="btn-acm-primary text-center text-sm"
-                >
-                  Join ACM
-                </Link>
-              </div>
-            )}
-          </div>
+          {isAdmin && (
+            <div className="pt-4 mt-2 border-t border-white/15 space-y-1">
+              <Link
+                to="/admin"
+                onClick={() => setIsOpen(false)}
+                className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-white/10 text-white font-semibold text-sm"
+              >
+                <Shield className="w-4 h-4" /> Admin Panel
+              </Link>
+              <button
+                onClick={() => {
+                  handleLogout();
+                  setIsOpen(false);
+                }}
+                className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-white/90 hover:bg-white/10 text-sm font-medium"
+              >
+                <LogOut className="w-4 h-4" /> Log Out
+              </button>
+            </div>
+          )}
         </div>
       )}
     </header>

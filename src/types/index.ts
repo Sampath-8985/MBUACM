@@ -1,18 +1,3 @@
-export type UserRole = 'user' | 'admin';
-
-export interface UserProfile {
-  id: string;
-  full_name: string;
-  email: string;
-  roll_number?: string;
-  branch?: string;
-  academic_year?: string;
-  phone?: string;
-  profile_completed: boolean;
-  created_at?: string;
-  updated_at?: string;
-}
-
 export interface CrewMember {
   id: string;
   name: string;
@@ -35,7 +20,13 @@ export interface CrewMember {
 
 export type EventStatus = 'draft' | 'published' | 'completed' | 'cancelled';
 export type RegistrationType = 'internal' | 'external';
-export type EventCategory = 'hackathon' | 'workshop' | 'talk' | 'contest' | 'general';
+// Categories are managed by the admin, so any string id is allowed
+export type EventCategory = string;
+
+export interface EventCategoryItem {
+  id: string;
+  label: string;
+}
 
 export interface ClubEvent {
   id: string;
@@ -56,16 +47,6 @@ export interface ClubEvent {
   created_at?: string;
   updated_at?: string;
   category?: EventCategory;
-}
-
-export interface EventRegistration {
-  id: string;
-  event_id: string;
-  user_id: string;
-  registered_at: string;
-  status: 'registered' | 'attended' | 'cancelled';
-  event?: ClubEvent;
-  profile?: UserProfile;
 }
 
 export interface ContactSubmission {
@@ -102,26 +83,3 @@ export interface EventGalleryItem {
   created_at?: string;
   updated_at?: string;
 }
-
-export const BRANCH_OPTIONS = [
-  'Computer Science & Engineering (CSE)',
-  'CSE (Artificial Intelligence & Machine Learning)',
-  'CSE (Data Science)',
-  'CSE (Cyber Security)',
-  'CSE (Cloud Computing)',
-  'Information Technology (IT)',
-  'Electronics & Communication Engineering (ECE)',
-  'Electrical & Electronics Engineering (EEE)',
-  'Mechanical Engineering (ME)',
-  'Civil Engineering (CE)',
-  'MCA / Master of Computer Applications',
-  'Other / Interdisciplinary'
-];
-
-export const ACADEMIC_YEAR_OPTIONS = [
-  '1st Year (B.Tech)',
-  '2nd Year (B.Tech)',
-  '3rd Year (B.Tech)',
-  '4th Year (B.Tech)',
-  'Postgraduate / Research Scholar'
-];

@@ -14,7 +14,7 @@ export const CrewPage: React.FC = () => {
       setLoading(true);
       try {
         const members = await getCrew(false); // Only published crew members
-        setCrew(members);
+        setCrew([...members].sort((a, b) => a.name.localeCompare(b.name)));
       } catch (err) {
         console.error('Failed to load crew members:', err);
       } finally {

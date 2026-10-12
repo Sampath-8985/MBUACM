@@ -1,4 +1,4 @@
-import { ClubEvent, CrewMember, EventRegistration, ContactSubmission, UserProfile, EventGalleryItem } from '../types';
+import { ClubEvent, CrewMember, ContactSubmission, EventGalleryItem } from '../types';
 
 export const INITIAL_CREW: CrewMember[] = [
   {
@@ -241,54 +241,6 @@ Top 3 winners were awarded mechanical keyboards, ACM merchandise, and fast-track
     registration_enabled: false,
     category: 'workshop',
     created_at: '2026-10-01T11:00:00Z',
-  }
-];
-
-export const DEMO_ADMIN_PROFILE: UserProfile = {
-  id: 'admin-user-001',
-  full_name: 'Aditya Sharma (Admin)',
-  email: 'admin@mbuacm.ac.in',
-  roll_number: '221FA04001',
-  branch: 'Computer Science & Engineering (CSE)',
-  academic_year: '4th Year (B.Tech)',
-  phone: '+91 98765 43210',
-  profile_completed: true,
-  created_at: '2025-01-01T00:00:00Z',
-};
-
-export const DEMO_STUDENT_PROFILE: UserProfile = {
-  id: 'student-user-002',
-  full_name: 'Ravi Teja Bandaru',
-  email: 'student@mbu.asia',
-  roll_number: '231FA04189',
-  branch: 'CSE (Artificial Intelligence & Machine Learning)',
-  academic_year: '3rd Year (B.Tech)',
-  phone: '+91 91234 56789',
-  profile_completed: true,
-  created_at: '2025-02-10T00:00:00Z',
-};
-
-export const INITIAL_REGISTRATIONS: EventRegistration[] = [
-  {
-    id: 'reg-001',
-    event_id: 'event-hacksprint-2026',
-    user_id: 'student-user-002',
-    registered_at: '2026-10-01T14:30:00Z',
-    status: 'registered',
-  },
-  {
-    id: 'reg-002',
-    event_id: 'event-genai-agents',
-    user_id: 'student-user-002',
-    registered_at: '2026-10-02T09:15:00Z',
-    status: 'registered',
-  },
-  {
-    id: 'reg-003',
-    event_id: 'event-hacksprint-2026',
-    user_id: 'admin-user-001',
-    registered_at: '2026-10-03T11:20:00Z',
-    status: 'registered',
   }
 ];
 
